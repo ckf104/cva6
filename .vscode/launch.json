@@ -1,0 +1,29 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python Debugger: Current File with Arguments",
+      "type": "debugpy",
+      "python": "${command:python.interpreterPath}",
+      "request": "launch",
+      "program": "${workspaceFolder}/verif/sim/cva6.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--target",
+        "rv64gc",
+        "--iss=veri-testharness",
+        "--iss_yaml=cva6.yaml",
+        //"--c_tests",
+        //"../tests/custom/hello_world/hello_world.c",
+        "--asm_tests",
+        "../tests/custom/hello_world/custom_test_template.S",
+        "--linker=../tests/custom/common/test.ld",
+        "--gcc_opts=-static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -g ../tests/custom/common/syscalls.c ../tests/custom/common/crt.S -lgcc -I../tests/custom/env -I../tests/custom/common",
+      ],
+      "cwd": "${workspaceFolder}/verif/sim"
+    }
+  ]
+}

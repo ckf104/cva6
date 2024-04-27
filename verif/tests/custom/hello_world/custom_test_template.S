@@ -23,7 +23,7 @@ main:
 
 fail:
   # Failure post-processing (messages, ecall setup etc.)
-  li a0, 0x0;
+  li a0, 0x1;
   jal exit;
 
 pass:
