@@ -10,18 +10,21 @@
 module instr_decoder
   import cvxif_pkg::*;
 #(
-    parameter int                                 NbInstr             = 1,
-    parameter cvxif_instr_pkg::copro_issue_resp_t CoproInstr[NbInstr] = {0}
+    parameter int                                 NbInstr                  = 1,
+    parameter int                                 EnableCustomVec          = 0,
+    parameter cvxif_instr_pkg::copro_issue_resp_t CoproInstr     [NbInstr] = {0}
 ) (
-    input  logic          clk_i,
-    input  x_issue_req_t  x_issue_req_i,
-    output x_issue_resp_t x_issue_resp_o
+    input  logic           clk_i,
+    input  logic           req_valid_i,
+    input  x_issue_req_t   x_issue_req_i,
+    output x_issue_resp_t  x_issue_resp_o,
+    output custom_vec_op_e instr_op_o
 );
 
   logic [NbInstr-1:0] sel;
 
   for (genvar i = 0; i < NbInstr; i++) begin : gen_predecoder_selector
-    assign sel[i] = ((CoproInstr[i].mask & x_issue_req_i.instr) == CoproInstr[i].instr);
+    assign sel[i] = ((CoproInstr[i].mask & x_issue_req_i.instr) == CoproInstr[i].instr) & req_valid_i & EnableCustomVec;
   end
 
   always_comb begin
@@ -31,6 +34,7 @@ module instr_decoder
     x_issue_resp_o.dualread  = '0;
     x_issue_resp_o.loadstore = '0;
     x_issue_resp_o.exc       = '0;
+    instr_op_o               = MV_V_X;
     for (int unsigned i = 0; i < NbInstr; i++) begin
       if (sel[i]) begin
         x_issue_resp_o.accept    = CoproInstr[i].resp.accept;
@@ -39,6 +43,7 @@ module instr_decoder
         x_issue_resp_o.dualread  = CoproInstr[i].resp.dualread;
         x_issue_resp_o.loadstore = CoproInstr[i].resp.loadstore;
         x_issue_resp_o.exc       = CoproInstr[i].resp.exc;
+        instr_op_o               = CoproInstr[i].op;
       end
     end
   end

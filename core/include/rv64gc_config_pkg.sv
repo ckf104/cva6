@@ -75,6 +75,8 @@ package cva6_config_pkg;
 
   localparam CVA6ConfigRvfiTrace = 1;
 
+  localparam CVA6CustomVecNumWords = 512;
+
   localparam config_pkg::cva6_user_cfg_t cva6_cfg = '{
       XLEN: unsigned'(CVA6ConfigXlen),
       FPGA_EN: bit'(CVA6ConfigFPGAEn),
@@ -92,6 +94,9 @@ package cva6_config_pkg;
       RVA: bit'(CVA6ConfigAExtEn),
       RVB: bit'(CVA6ConfigBExtEn),
       RVV: bit'(CVA6ConfigVExtEn),
+      EnableCustomVec: bit'(1),
+      CustomReadPorts: unsigned'(2),
+      CustomVecNumWords: unsigned'(CVA6CustomVecNumWords),
       RVC: bit'(CVA6ConfigCExtEn),
       RVZCB: bit'(CVA6ConfigZcbExtEn),
       RVZCMP: bit'(CVA6ConfigZcmpExtEn),

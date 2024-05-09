@@ -20,139 +20,160 @@ module cvxif_example_coprocessor
     input  cvxif_req_t  cvxif_req_i,
     output cvxif_resp_t cvxif_resp_o
 );
+  // Commit interface is not supported by CPU
+  // See https://github.com/openhwgroup/cva6/issues/897
+  // logic      x_commit_valid_i;
+  // x_commit_t x_commit_i;
 
-  //Compressed interface
-  logic               x_compressed_valid_i;
-  logic               x_compressed_ready_o;
-  x_compressed_req_t  x_compressed_req_i;
-  x_compressed_resp_t x_compressed_resp_o;
+  always_comb begin : assign_unused_signals
+    // Compressed and memory interface is not supported by CPU
+    cvxif_resp_o.x_compressed_ready = 'b0;
+    cvxif_resp_o.x_compressed_resp  = 'b0;
+    cvxif_resp_o.x_mem_valid        = 'b0;
+    cvxif_resp_o.x_mem_req          = 'b0;
+  end
+
   //Issue interface
-  logic               x_issue_valid_i;
-  logic               x_issue_ready_o;
-  x_issue_req_t       x_issue_req_i;
-  x_issue_resp_t      x_issue_resp_o;
-  //Commit interface
-  logic               x_commit_valid_i;
-  x_commit_t          x_commit_i;
-  //Memory interface
-  logic               x_mem_valid_o;
-  logic               x_mem_ready_i;
-  x_mem_req_t         x_mem_req_o;
-  x_mem_resp_t        x_mem_resp_i;
-  //Memory result interface
-  logic               x_mem_result_valid_i;
-  x_mem_result_t      x_mem_result_i;
-  //Result interface
-  logic               x_result_valid_o;
-  logic               x_result_ready_i;
-  x_result_t          x_result_o;
+  logic          x_issue_valid_i;
+  logic          x_issue_ready_o;
+  x_issue_req_t  x_issue_req_i;
+  x_issue_resp_t x_issue_resp_o;
 
-  assign x_compressed_valid_i            = cvxif_req_i.x_compressed_valid;
-  assign x_compressed_req_i              = cvxif_req_i.x_compressed_req;
-  assign x_issue_valid_i                 = cvxif_req_i.x_issue_valid;
-  assign x_issue_req_i                   = cvxif_req_i.x_issue_req;
-  assign x_commit_valid_i                = cvxif_req_i.x_commit_valid;
-  assign x_commit_i                      = cvxif_req_i.x_commit;
-  assign x_mem_ready_i                   = cvxif_req_i.x_mem_ready;
-  assign x_mem_resp_i                    = cvxif_req_i.x_mem_resp;
-  assign x_mem_result_valid_i            = cvxif_req_i.x_mem_result_valid;
-  assign x_mem_result_i                  = cvxif_req_i.x_mem_result;
-  assign x_result_ready_i                = cvxif_req_i.x_result_ready;
+  assign x_issue_valid_i            = cvxif_req_i.x_issue_valid;
+  assign x_issue_req_i              = cvxif_req_i.x_issue_req;
+  assign x_issue_ready_o            = 1'b1;
+  assign cvxif_resp_o.x_issue_ready = x_issue_ready_o;
+  assign cvxif_resp_o.x_issue_resp  = x_issue_resp_o;
 
-  assign cvxif_resp_o.x_compressed_ready = x_compressed_ready_o;
-  assign cvxif_resp_o.x_compressed_resp  = x_compressed_resp_o;
-  assign cvxif_resp_o.x_issue_ready      = x_issue_ready_o;
-  assign cvxif_resp_o.x_issue_resp       = x_issue_resp_o;
-  assign cvxif_resp_o.x_mem_valid        = x_mem_valid_o;
-  assign cvxif_resp_o.x_mem_req          = x_mem_req_o;
-  assign cvxif_resp_o.x_result_valid     = x_result_valid_o;
-  assign cvxif_resp_o.x_result           = x_result_o;
+  custom_vec_op_e decoded_op;
 
-  //Compressed interface
-  assign x_compressed_ready_o            = '0;
-  assign x_compressed_resp_o.instr       = '0;
-  assign x_compressed_resp_o.accept      = '0;
-
+  // Decode incoming instruction
   instr_decoder #(
       .NbInstr   (cvxif_instr_pkg::NbInstr),
+      .EnableCustomVec(CVA6Cfg.EnableCustomVec),
       .CoproInstr(cvxif_instr_pkg::CoproInstr)
   ) instr_decoder_i (
       .clk_i         (clk_i),
+      .req_valid_i   (x_issue_valid_i),
       .x_issue_req_i (x_issue_req_i),
-      .x_issue_resp_o(x_issue_resp_o)
+      .x_issue_resp_o(x_issue_resp_o),
+      .instr_op_o    (decoded_op)
   );
 
-  typedef struct packed {
-    x_issue_req_t  req;
-    x_issue_resp_t resp;
-  } x_issue_t;
+  typedef logic [$clog2(cva6_config_pkg::CVA6CustomVecNumWords)-1:0] vec_addr_t;
+  typedef logic [cva6_config_pkg::CVA6ConfigXlen-1:0] vec_data_t;
+  typedef logic [(cva6_config_pkg::CVA6ConfigXlen/8)-1:0] vec_be_t;
+  logic                                    vec_we;  // write enable
+  vec_addr_t                               vec_waddr;  // request address
+  vec_data_t                               vec_wdata;  // write data
+  vec_be_t                                 vec_be;  // write byte enable
+  vec_addr_t [CVA6Cfg.CustomReadPorts-1:0] vec_raddr;  // read address
+  vec_data_t [CVA6Cfg.CustomReadPorts-1:0] vec_rdata;  // read data
 
-  logic fifo_full, fifo_empty;
-  logic x_issue_ready_q;
-  logic instr_push, instr_pop;
-  x_issue_t req_i;
-  x_issue_t req_o;
+  logic                                    fired_new_instr;
+  logic                                    new_instr_wb;
+  assign fired_new_instr = x_issue_resp_o.accept;
 
+  vec_data_t vec_rdata_q;
+  logic result_valid_q, result_we_q, result_we_d;
+  // TODO: add ID
+  assign result_we_d = decoded_op == MV_V_X;
 
+  logic [9:0] tmp_wt_complete_addr, tmp_rd_complete_addr;
+  // Concatenate {rs2, rd} for MV_X_V
+  assign tmp_wt_complete_addr = {x_issue_req_i.instr[24:20], x_issue_req_i.instr[11:7]};
+  // Concatenate {rs2, rs1} for MV_V_X
+  assign tmp_rd_complete_addr = {x_issue_req_i.instr[24:20], x_issue_req_i.instr[19:15]};
 
-  assign instr_push = x_issue_resp_o.accept ? 1 : 0;
-  assign instr_pop = (x_commit_i.x_commit_kill && x_commit_valid_i) || x_result_valid_o;
-  assign x_issue_ready_q = ~fifo_full; // if something is in the fifo, the instruction is being processed
-                                       // so we can't receive anything else
-  assign req_i.req = x_issue_req_i;
-  assign req_i.resp = x_issue_resp_o;
+  always_comb begin : mv_instr_logic
+    vec_we = 'b0;
+    vec_waddr = 'b0;
+    vec_be = 'b0;
+    vec_wdata = 'b0;
+    vec_raddr = 'b0;
 
-  always_ff @(posedge clk_i or negedge rst_ni) begin : regs
-    if (!rst_ni) begin
-      x_issue_ready_o <= 1;
-    end else begin
-      x_issue_ready_o <= x_issue_ready_q;
+    if (fired_new_instr) begin
+      if (decoded_op == MV_V_X) begin
+        vec_raddr[0] = tmp_rd_complete_addr[$size(vec_raddr)-1:0];
+      end else if (decoded_op == MV_X_V) begin
+        vec_we = 1'b1;
+        vec_waddr = tmp_wt_complete_addr[$size(vec_waddr)-1:0];
+        vec_be = ~'b0;
+        vec_wdata = x_issue_req_i.rs[0];
+      end else begin
+        // Illegal instruction
+      end
     end
   end
 
-  fifo_v3 #(
-      .FALL_THROUGH(1),               //data_o ready and pop in the same cycle
-      .DATA_WIDTH  (64),
-      .DEPTH       (8),
-      .dtype       (x_issue_t),
-      .FPGA_EN     (CVA6Cfg.FPGA_EN)
-  ) fifo_commit_i (
-      .clk_i     (clk_i),
-      .rst_ni    (rst_ni),
-      .flush_i   (1'b0),
-      .testmode_i(1'b0),
-      .full_o    (fifo_full),
-      .empty_o   (fifo_empty),
-      .usage_o   (),
-      .data_i    (req_i),
-      .push_i    (instr_push),
-      .data_o    (req_o),
-      .pop_i     (instr_pop)
-  );
+  logic fired_new_instr_id, instr_id_q;
+  assign fired_new_instr_id = x_issue_req_i.id;
 
-  logic [3:0] c;
-  counter #(
-      .WIDTH(4)
-  ) counter_i (
-      .clk_i     (clk_i),
-      .rst_ni    (rst_ni),
-      .clear_i   (~x_commit_i.x_commit_kill && x_commit_valid_i),
-      .en_i      (1'b1),
-      .load_i    (),
-      .down_i    (),
-      .d_i       (),
-      .q_o       (c),
-      .overflow_o()
-  );
-
-  always_comb begin
-    x_result_o.data    = req_o.req.rs[0] + req_o.req.rs[1] + (X_NUM_RS == 3 ? req_o.req.rs[2] : 0);
-    x_result_valid_o   = (c == x_result_o.data[3:0]) && ~fifo_empty ? 1 : 0;
-    x_result_o.id      = req_o.req.id;
-    x_result_o.rd      = req_o.req.instr[11:7];
-    x_result_o.we      = req_o.resp.writeback & x_result_valid_o;
-    x_result_o.exc     = 0;
-    x_result_o.exccode = 0;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      // Don't need to reset `vec_rdata_q`
+      // Don't need to reset `result_we_q`
+      // Don't need to reset `instr_id_q`
+      result_valid_q <= 1'b1;
+    end else begin
+      result_valid_q <= fired_new_instr;  // TODO: deal with multi cycle
+      result_we_q <= result_we_d;
+      vec_rdata_q <= vec_rdata[0];
+      instr_id_q <= fired_new_instr_id;
+    end
   end
+
+  generate
+    if (CVA6Cfg.EnableCustomVec) begin : vec_regfile_gen
+      ariane_vecram #(
+          .NumWords(CVA6Cfg.CustomVecNumWords),  // 512 64bits words --> 32 1024bits vreg
+          .DataWidth(CVA6Cfg.XLEN),  // Data signal width
+          .ByteWidth(32'd8),  // Width of a data byte
+          .NumReadPorts(CVA6Cfg.CustomReadPorts),  // Number of read ports
+          .NumWritePorts(32'd1)  // Number of write ports
+      ) ariane_vecram (
+          .clk_i(clk_i),    // Clock
+          // input ports
+          .we_i(vec_we),     // write enable
+          .waddr_i(vec_waddr),  // request address
+          .wdata_i(vec_wdata),  // write data
+          .be_i(vec_be),     // write byte enable
+          .raddr_i(vec_raddr),  // read address
+          // input  logic  [NumReadPorts-1:0] req_i,      // request
+          .rdata_o(vec_rdata) // read data
+      );
+    end else begin : no_vec_regfile_gen
+      assign vec_rdata_o = 'b0;
+    end
+  endgenerate
+
+  //Result interface
+  logic      x_result_valid_o;
+  logic      x_result_ready_i;
+  x_result_t x_result_o;
+
+  /*
+    logic [X_ID_WIDTH-1:0]  id;
+    logic [X_RFW_WIDTH-1:0] data;
+    logic [4:0]             rd;
+    logic                   we;
+    logic                   exc;
+    logic [5:0]             exccode;
+  */
+  // TODO: Currently we assume `cvxif_req_i.x_result_ready` always be true
+  always_comb begin : result_commit_logic
+    x_result_valid_o = result_valid_q;
+    x_result_o = 'b0;
+
+    x_result_o.id = instr_id_q;
+    x_result_o.data = vec_rdata_q;
+    x_result_o.we = result_we_q;
+    // CPU will ignore `x_result_o.rd` currently
+  end
+
+  assign x_result_ready_i            = cvxif_req_i.x_result_ready;
+
+  assign cvxif_resp_o.x_result_valid = x_result_valid_o;
+  assign cvxif_resp_o.x_result       = x_result_o;
 
 endmodule

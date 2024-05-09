@@ -9,18 +9,27 @@
 
 package cvxif_instr_pkg;
 
+  typedef enum logic [1:0] {
+    MV_V_X,
+    MV_X_V
+  } custom_vec_op_e;
+
   typedef struct packed {
     logic [31:0]              instr;
     logic [31:0]              mask;
     cvxif_pkg::x_issue_resp_t resp;
+    custom_vec_op_e           op;
   } copro_issue_resp_t;
+
+
 
   // 2 Possible RISCV instructions for Coprocessor
   parameter int unsigned NbInstr = 2;
   parameter copro_issue_resp_t CoproInstr[NbInstr] = '{
       '{
-          instr: 32'b00000_00_00000_00000_0_00_00000_0101011,  // custom1 opcode
-          mask: 32'b00000_00_00000_00000_0_00_00000_1111111,
+          instr: 32'b00000_00_00000_00000_0_00_00000_0001011,  // 
+          mask: 32'b11111_11_00000_00000_1_11_00000_1111111,
+          op: MV_V_X,
           resp : '{
               accept : 1'b1,
               writeback : 1'b0,
@@ -31,8 +40,9 @@ package cvxif_instr_pkg;
           }
       },
       '{
-          instr: 32'b00000_00_00000_00000_0_00_00000_1011011,  // custom2 opcode
-          mask: 32'b00000_00_00000_00000_0_00_00000_1111111,
+          instr: 32'b00000_00_00000_00000_0_01_00000_0001011,  // custom2 opcode
+          mask: 32'b11111_11_00000_00000_1_11_00000_1111111,
+          op: MV_X_V,
           resp : '{
               accept : 1'b1,
               writeback : 1'b1,

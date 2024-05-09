@@ -78,6 +78,12 @@ package config_pkg;
     bit                          RVB;
     // Vector RISC-V extension
     bit                          RVV;
+    // Custom RISC-V vector extension
+    bit                          EnableCustomVec;
+    // Read ports number of custom vreg files
+    int unsigned                 CustomReadPorts;
+    // Number of words in custom vreg files
+    int unsigned                 CustomVecNumWords;
     // Compress RISC-V extension
     bit                          RVC;
     // Zcb RISC-V extension
@@ -199,6 +205,9 @@ package config_pkg;
     bit          XFVec;
     bit          CvxifEn;
     bit          ZiCondExtEn;
+    bit          EnableCustomVec;
+    int unsigned CustomReadPorts;
+    int unsigned CustomVecNumWords;
 
     int unsigned NR_SB_ENTRIES;
     int unsigned TRANS_ID_BITS;
