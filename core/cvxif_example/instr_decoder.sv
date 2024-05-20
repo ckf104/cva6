@@ -14,11 +14,12 @@ module instr_decoder
     parameter int                                 EnableCustomVec          = 0,
     parameter cvxif_instr_pkg::copro_issue_resp_t CoproInstr     [NbInstr] = {0}
 ) (
-    input  logic           clk_i,
-    input  logic           req_valid_i,
-    input  x_issue_req_t   x_issue_req_i,
-    output x_issue_resp_t  x_issue_resp_o,
-    output custom_vec_op_e instr_op_o
+    input  logic                            clk_i,
+    input  logic                            req_valid_i,
+    input  x_issue_req_t                    x_issue_req_i,
+    output x_issue_resp_t                   x_issue_resp_o,
+    output cvxif_instr_pkg::custom_vec_op_e instr_op_o,
+    output cvxif_instr_pkg::vlen_t          vlen_o
 );
 
   logic [NbInstr-1:0] sel;
@@ -34,7 +35,8 @@ module instr_decoder
     x_issue_resp_o.dualread  = '0;
     x_issue_resp_o.loadstore = '0;
     x_issue_resp_o.exc       = '0;
-    instr_op_o               = MV_V_X;
+    instr_op_o               = cvxif_instr_pkg::MV_V_X;
+    vlen_o                   = '0;
     for (int unsigned i = 0; i < NbInstr; i++) begin
       if (sel[i]) begin
         x_issue_resp_o.accept    = CoproInstr[i].resp.accept;
@@ -44,6 +46,7 @@ module instr_decoder
         x_issue_resp_o.loadstore = CoproInstr[i].resp.loadstore;
         x_issue_resp_o.exc       = CoproInstr[i].resp.exc;
         instr_op_o               = CoproInstr[i].op;
+        vlen_o                   = CoproInstr[i].vlen;
       end
     end
   end

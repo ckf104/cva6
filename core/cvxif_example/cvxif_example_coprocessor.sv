@@ -9,6 +9,13 @@
 // Example coprocessor adds rs1,rs2(,rs3) together and gives back the result to the CPU via the CoreV-X-Interface.
 // Coprocessor delays the sending of the result depending on result least significant bits.
 
+
+// Two assumption I have made:
+// 1. cvxif_req_i.x_issue_valid will not be asserted if cvxif_resp_o.x_issue_ready is low.
+// 2. cvxif_req_i.x_result_ready will always be asserted.
+
+// TODO: read / write hazard detection
+
 module cvxif_example_coprocessor
   import cvxif_pkg::*;
   import cvxif_instr_pkg::*;
@@ -41,11 +48,11 @@ module cvxif_example_coprocessor
 
   assign x_issue_valid_i            = cvxif_req_i.x_issue_valid;
   assign x_issue_req_i              = cvxif_req_i.x_issue_req;
-  assign x_issue_ready_o            = 1'b1;
   assign cvxif_resp_o.x_issue_ready = x_issue_ready_o;
   assign cvxif_resp_o.x_issue_resp  = x_issue_resp_o;
 
   custom_vec_op_e decoded_op;
+  vlen_t          decoded_vlen;
 
   // Decode incoming instruction
   instr_decoder #(
@@ -57,69 +64,112 @@ module cvxif_example_coprocessor
       .req_valid_i   (x_issue_valid_i),
       .x_issue_req_i (x_issue_req_i),
       .x_issue_resp_o(x_issue_resp_o),
-      .instr_op_o    (decoded_op)
+      .instr_op_o    (decoded_op),
+      .vlen_o        (decoded_vlen)
   );
+
+  typedef enum logic {
+    IDLE,
+    WORKING
+  } state_e;
+
+  state_e state_d, state_q;
+
+  logic fired_new_instr;
+  logic new_calc_instr;
+  assign fired_new_instr = x_issue_resp_o.accept;
+  assign new_calc_instr  = fired_new_instr && decoded_op != MV_V_X && decoded_op != MV_X_V;
+
+  logic inst_done;
+
+  always_comb begin : state_machine
+    state_d = state_q;
+    if (state_q == IDLE && new_calc_instr) begin
+      state_d = WORKING;
+    end else if (state_q == WORKING && inst_done) begin
+      state_d = IDLE;
+    end
+  end
+  assign x_issue_ready_o = state_q == IDLE;
+
+  ///////////////////////////////////////////////////
+  //    Vector Register File Read / Write Logic    //
+  ///////////////////////////////////////////////////
+
+  localparam int unsigned log2WordNumberOneReg = $clog2(CVA6Cfg.CustomVecNumWords / 32);
+  localparam logic [log2WordNumberOneReg-1:0] PrefixZero = 'b0;
 
   typedef logic [$clog2(cva6_config_pkg::CVA6CustomVecNumWords)-1:0] vec_addr_t;
   typedef logic [cva6_config_pkg::CVA6ConfigXlen-1:0] vec_data_t;
   typedef logic [(cva6_config_pkg::CVA6ConfigXlen/8)-1:0] vec_be_t;
-  logic                                    vec_we;  // write enable
-  vec_addr_t                               vec_waddr;  // request address
-  vec_data_t                               vec_wdata;  // write data
-  vec_be_t                                 vec_be;  // write byte enable
-  vec_addr_t [CVA6Cfg.CustomReadPorts-1:0] vec_raddr;  // read address
-  vec_data_t [CVA6Cfg.CustomReadPorts-1:0] vec_rdata;  // read data
-
-  logic                                    fired_new_instr;
-  logic                                    new_instr_wb;
-  assign fired_new_instr = x_issue_resp_o.accept;
-
-  vec_data_t vec_rdata_q;
-  logic result_valid_q, result_we_q, result_we_d;
-  // TODO: add ID
-  assign result_we_d = decoded_op == MV_V_X;
+  logic vec_we;  // write enable
+  vec_addr_t vec_waddr, vec_waddr_d, vec_waddr_q;  // request address
+  vec_data_t vec_wdata;  // write data
+  vec_be_t   vec_be;  // write byte enable
 
   logic [9:0] tmp_wt_complete_addr, tmp_rd_complete_addr;
-  // Concatenate {rs2, rd} for MV_X_V
-  assign tmp_wt_complete_addr = {x_issue_req_i.instr[24:20], x_issue_req_i.instr[11:7]};
-  // Concatenate {rs2, rs1} for MV_V_X
-  assign tmp_rd_complete_addr = {x_issue_req_i.instr[24:20], x_issue_req_i.instr[19:15]};
+  // Concatenate {rd, rs2} for MV_X_V, rd specify reg number, rs2 specify word number
+  assign tmp_wt_complete_addr = {
+    x_issue_req_i.instr[11:7], x_issue_req_i.instr[20+log2WordNumberOneReg-1:20]
+  };
+  // Concatenate {rs1, rs2} for MV_V_X, rs1 specify reg number, rs2 specify word number
+  assign tmp_rd_complete_addr = {
+    x_issue_req_i.instr[19:15], x_issue_req_i.instr[20+log2WordNumberOneReg-1:20]
+  };
 
-  always_comb begin : mv_instr_logic
-    vec_we = 'b0;
-    vec_waddr = 'b0;
-    vec_be = 'b0;
-    vec_wdata = 'b0;
-    vec_raddr = 'b0;
+  logic blk_write_ready, blk_write_ack;
+  vec_data_t blk_write_data;
+  assign blk_write_ready = state_q == WORKING;
 
-    if (fired_new_instr) begin
-      if (decoded_op == MV_V_X) begin
-        vec_raddr[0] = tmp_rd_complete_addr[$size(vec_raddr)-1:0];
-      end else if (decoded_op == MV_X_V) begin
-        vec_we = 1'b1;
-        vec_waddr = tmp_wt_complete_addr[$size(vec_waddr)-1:0];
-        vec_be = ~'b0;
-        vec_wdata = x_issue_req_i.rs[0];
-      end else begin
-        // Illegal instruction
-      end
+  always_comb begin : vrf_write
+    vec_we = 1'b0;
+    if (fired_new_instr && decoded_op == MV_X_V) vec_we = 1'b1;
+    else if (blk_write_ack) vec_we = 1'b1;
+
+    vec_waddr_d = vec_waddr_q;
+    vec_waddr   = vec_waddr_q;
+    if (new_calc_instr) begin
+      vec_waddr_d = {x_issue_req_i.instr[11:7], PrefixZero};
+    end else if (fired_new_instr && decoded_op == MV_X_V) begin
+      vec_waddr = tmp_wt_complete_addr;
+    end else if (blk_write_ack) begin
+      vec_waddr_d = vec_waddr_q + 1;
     end
+
+    vec_be = {$size(vec_be) {1'b1}};
+
+    vec_wdata = x_issue_req_i.rs[0];
+    if (blk_write_ack) vec_wdata = blk_write_data;
   end
 
-  logic fired_new_instr_id, instr_id_q;
-  assign fired_new_instr_id = x_issue_req_i.id;
+  vec_addr_t [CVA6Cfg.CustomReadPorts-1:0] vec_raddr_d, vec_raddr_q;  // read address
+  vec_data_t [CVA6Cfg.CustomReadPorts-1:0] vec_rdata_d, vec_rdata_q;  // read out data
 
-  always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni) begin
-      // Don't need to reset `vec_rdata_q`
-      // Don't need to reset `result_we_q`
-      // Don't need to reset `instr_id_q`
-      result_valid_q <= 1'b1;
-    end else begin
-      result_valid_q <= fired_new_instr;  // TODO: deal with multi cycle
-      result_we_q <= result_we_d;
-      vec_rdata_q <= vec_rdata[0];
-      instr_id_q <= fired_new_instr_id;
+  vlen_t [CVA6Cfg.CustomReadPorts-1:0] vlen_d, vlen_q;
+  logic [CVA6Cfg.CustomReadPorts-1:0] rdata_valid;
+
+  logic blkbox_read_ack[CVA6Cfg.CustomReadPorts-1:0];
+
+  always_comb begin : vrf_read
+    vlen_d = vlen_q;
+    vec_raddr_d = vec_raddr_q;
+
+    if (new_calc_instr) begin
+      vec_raddr_d[0] = {x_issue_req_i.instr[19:15], PrefixZero};  // rs1
+      vec_raddr_d[1] = {x_issue_req_i.instr[24:20], PrefixZero};  // rs2
+      for (int i = 0; i < CVA6Cfg.CustomReadPorts; i++) begin
+        vlen_d[i] = decoded_vlen;
+      end
+    end else if (fired_new_instr) begin
+      vec_raddr_d[0] = tmp_rd_complete_addr;
+    end
+
+    for (int i = 0; i < CVA6Cfg.CustomReadPorts; i++) begin
+      rdata_valid[i] = vlen_q[i] != 'b0;
+      if (blkbox_read_ack[i]) begin
+        vlen_d = vlen_q - 1;
+        vec_raddr_d[i] = vec_raddr_q[i] + 1;
+      end
     end
   end
 
@@ -138,19 +188,14 @@ module cvxif_example_coprocessor
           .waddr_i(vec_waddr),  // request address
           .wdata_i(vec_wdata),  // write data
           .be_i(vec_be),     // write byte enable
-          .raddr_i(vec_raddr),  // read address
+          .raddr_i(vec_raddr_d),  // read address
           // input  logic  [NumReadPorts-1:0] req_i,      // request
-          .rdata_o(vec_rdata) // read data
+          .rdata_o(vec_rdata_d) // read data
       );
     end else begin : no_vec_regfile_gen
-      assign vec_rdata_o = 'b0;
+      assign vec_rdata_d = 'b0;
     end
   endgenerate
-
-  //Result interface
-  logic      x_result_valid_o;
-  logic      x_result_ready_i;
-  x_result_t x_result_o;
 
   /*
     logic [X_ID_WIDTH-1:0]  id;
@@ -160,11 +205,34 @@ module cvxif_example_coprocessor
     logic                   exc;
     logic [5:0]             exccode;
   */
-  // TODO: Currently we assume `cvxif_req_i.x_result_ready` always be true
+  ////////////////////////////////////
+  ////// Result Commit Logic /////////
+  ////////////////////////////////////
+
+  //Result interface
+  logic      x_result_valid_o;
+  logic      x_result_ready_i;
+  x_result_t x_result_o;
+
+  logic result_valid_q, result_valid_d;
+  logic result_we_q, result_we_d;
+  logic [X_ID_WIDTH-1:0] instr_id_q, instr_id_d;
+  
+  assign result_we_d = decoded_op == MV_V_X;
+  
   always_comb begin : result_commit_logic
+    result_we_d = 1'b0;
+    if (fired_new_instr && decoded_op == MV_V_X) result_we_d = 1'b1;
+
+    result_valid_d = 1'b0;
+    if (fired_new_instr && !new_calc_instr) result_valid_d = 1'b1;
+    else if (inst_done) result_valid_d = 1'b1;
+
+    instr_id_d = instr_id_q;
+    if (fired_new_instr) instr_id_d = x_issue_req_i.id;
+
     x_result_valid_o = result_valid_q;
     x_result_o = 'b0;
-
     x_result_o.id = instr_id_q;
     x_result_o.data = vec_rdata_q;
     x_result_o.we = result_we_q;
@@ -175,5 +243,66 @@ module cvxif_example_coprocessor
 
   assign cvxif_resp_o.x_result_valid = x_result_valid_o;
   assign cvxif_resp_o.x_result       = x_result_o;
+
+  ///////////////
+  // Black Box //
+  ///////////////
+
+  logic inst_ready;  // The module can accept new instruction
+  logic inst_start_d, inst_start_q;
+
+  always_comb begin : inst_exec_control
+    inst_start_d = inst_start_q;
+    if (new_calc_instr) begin
+      inst_start_d = 1'b1;
+    end else if (inst_ready) begin
+      inst_start_d = 1'b0;
+    end
+  end
+
+  uint64_vadd64b2w blackbox (
+      .ap_clk(clk_i),
+      .ap_rst_n(rst_ni),
+      .ap_start(inst_start_d),
+      .ap_done(inst_done),
+      .ap_idle(),     // igonred
+      .ap_ready(inst_ready),
+      .in1_dout(vec_rdata_q[0]),
+      .in1_empty_n(rdata_valid[0]),
+      .in1_read(blkbox_read_ack[0]),
+      .in2_dout(vec_rdata_q[1]),
+      .in2_empty_n(rdata_valid[1]),
+      .in2_read(blkbox_read_ack[1]),
+      .out_r_din(blk_write_data),
+      .out_r_full_n(blk_write_ready),
+      .out_r_write(blk_write_ack)
+  );
+
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      // Don't need to reset `vec_rdata_q`
+      // Don't need to reset `result_we_q`
+      // Don't need to reset `instr_id_q`
+      // Don't need to reset `vec_raddr_q`
+      // Don't need to reset `vec_waddr_q`
+      result_valid_q <= 1'b0;
+      state_q <= IDLE;
+      inst_start_q <= 1'b0;
+      vlen_q <= 'b0;
+    end else begin
+      result_valid_q <= result_valid_d;
+      result_we_q <= result_we_d;
+      instr_id_q <= instr_id_d;
+      state_q <= state_d;
+
+      vec_rdata_q <= vec_rdata_d;
+      vec_raddr_q <= vec_raddr_d;
+      vec_waddr_q <= vec_waddr_d;
+      vlen_q <= vlen_d;
+
+      inst_start_q <= inst_start_d;
+    end
+  end
 
 endmodule
