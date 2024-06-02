@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-# Usage example: ./parser_helper.py < vadd4_test_gen.txt
+# Usage example: ./parser_helper.py < vadd4_test.S
 
 # mv.xv a0, v0.0
 # mv.vx v0.0, a0
@@ -96,7 +96,7 @@ def mvxvParser(instr: list[str]):
 # vadd2 v1, v2, v3  (v1 = v2 + v3)
 
 
-def vadd1Parser(instr: list[str]):
+def vadd2Parser(instr: list[str]):
     func7 = 0b0000001
     func3 = 0b000
     opcode = 0b0001011
@@ -120,19 +120,20 @@ inst_list = {
 }
 
 def preProcess(instr: str):
+    instr = instr[3:]  # drop "///"
     instr = instr.replace(",", " ")
     instr = instr.split()
     return instr
 
 def postProcess(instr: int):
-    return f".word {instr:032b}"
+    return f".word 0b{instr:032b}"
 
 while True:
     try:
       instr = input()
     except:
       break
-    if instr == "":
+    if not instr.startswith("///"):
       continue
     instr = preProcess(instr)
     assert instr[0] in inst_list
