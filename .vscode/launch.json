@@ -19,11 +19,15 @@
         //"--c_tests",
         //"../tests/custom/hello_world/hello_world.c",
         "--asm_tests",
-        "../tests/custom/hello_world/custom_test_template.S",
+        "../tests/custom/hello_world/vadd4_test.S",
         "--linker=../tests/custom/common/test.ld",
         "--gcc_opts=-static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -g ../tests/custom/common/syscalls.c ../tests/custom/common/crt.S -lgcc -I../tests/custom/env -I../tests/custom/common",
       ],
-      "cwd": "${workspaceFolder}/verif/sim"
+      "cwd": "${workspaceFolder}/verif/sim",
+      "env": {
+        // This will generate `<elfname>.fst` file in the same directory of log
+        "TRACE_COMPACT": "1"
+      }
     }
   ]
 }

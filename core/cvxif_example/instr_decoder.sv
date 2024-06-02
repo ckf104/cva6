@@ -25,7 +25,7 @@ module instr_decoder
   logic [NbInstr-1:0] sel;
 
   for (genvar i = 0; i < NbInstr; i++) begin : gen_predecoder_selector
-    assign sel[i] = ((CoproInstr[i].mask & x_issue_req_i.instr) == CoproInstr[i].instr) & req_valid_i & EnableCustomVec;
+    assign sel[i] = ((CoproInstr[i].mask & x_issue_req_i.instr) == CoproInstr[i].instr) & req_valid_i & (EnableCustomVec == 1);
   end
 
   always_comb begin

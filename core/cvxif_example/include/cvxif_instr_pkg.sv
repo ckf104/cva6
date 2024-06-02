@@ -12,7 +12,7 @@ package cvxif_instr_pkg;
   typedef enum logic [1:0] {
     MV_V_X,
     MV_X_V,
-    VADD4
+    VADD2
   } custom_vec_op_e;
 
   typedef logic [9:0] vlen_t;
@@ -61,8 +61,8 @@ package cvxif_instr_pkg;
       '{
           instr: 32'b00000_01_00000_00000_0_00_00000_0001011,  // vadd4
           mask: 32'b11111_11_00000_00000_1_11_00000_1111111,
-          op: VADD4,
-          vlen: 'd4,
+          op: VADD2,
+          vlen: 'd2,
           resp : '{
               accept : 1'b1,
               writeback : 1'b0,

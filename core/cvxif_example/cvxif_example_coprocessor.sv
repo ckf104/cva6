@@ -107,7 +107,7 @@ module cvxif_example_coprocessor
   vec_data_t vec_wdata;  // write data
   vec_be_t   vec_be;  // write byte enable
 
-  logic [9:0] tmp_wt_complete_addr, tmp_rd_complete_addr;
+  vec_addr_t tmp_wt_complete_addr, tmp_rd_complete_addr;
   // Concatenate {rd, rs2} for MV_X_V, rd specify reg number, rs2 specify word number
   assign tmp_wt_complete_addr = {
     x_issue_req_i.instr[11:7], x_issue_req_i.instr[20+log2WordNumberOneReg-1:20]
@@ -148,7 +148,7 @@ module cvxif_example_coprocessor
   vlen_t [CVA6Cfg.CustomReadPorts-1:0] vlen_d, vlen_q;
   logic [CVA6Cfg.CustomReadPorts-1:0] rdata_valid;
 
-  logic blkbox_read_ack[CVA6Cfg.CustomReadPorts-1:0];
+  logic [CVA6Cfg.CustomReadPorts-1:0] blkbox_read_ack;
 
   always_comb begin : vrf_read
     vlen_d = vlen_q;
@@ -167,7 +167,7 @@ module cvxif_example_coprocessor
     for (int i = 0; i < CVA6Cfg.CustomReadPorts; i++) begin
       rdata_valid[i] = vlen_q[i] != 'b0;
       if (blkbox_read_ack[i]) begin
-        vlen_d = vlen_q - 1;
+        vlen_d[i] = vlen_q[i] - 1;
         vec_raddr_d[i] = vec_raddr_q[i] + 1;
       end
     end
@@ -217,9 +217,7 @@ module cvxif_example_coprocessor
   logic result_valid_q, result_valid_d;
   logic result_we_q, result_we_d;
   logic [X_ID_WIDTH-1:0] instr_id_q, instr_id_d;
-  
-  assign result_we_d = decoded_op == MV_V_X;
-  
+
   always_comb begin : result_commit_logic
     result_we_d = 1'b0;
     if (fired_new_instr && decoded_op == MV_V_X) result_we_d = 1'b1;
@@ -234,7 +232,7 @@ module cvxif_example_coprocessor
     x_result_valid_o = result_valid_q;
     x_result_o = 'b0;
     x_result_o.id = instr_id_q;
-    x_result_o.data = vec_rdata_q;
+    x_result_o.data = vec_rdata_q[0];
     x_result_o.we = result_we_q;
     // CPU will ignore `x_result_o.rd` currently
   end
@@ -250,6 +248,7 @@ module cvxif_example_coprocessor
 
   logic inst_ready;  // The module can accept new instruction
   logic inst_start_d, inst_start_q;
+  logic blkbox_idle;  // debug only
 
   always_comb begin : inst_exec_control
     inst_start_d = inst_start_q;
@@ -265,7 +264,7 @@ module cvxif_example_coprocessor
       .ap_rst_n(rst_ni),
       .ap_start(inst_start_d),
       .ap_done(inst_done),
-      .ap_idle(),     // igonred
+      .ap_idle(blkbox_idle),
       .ap_ready(inst_ready),
       .in1_dout(vec_rdata_q[0]),
       .in1_empty_n(rdata_valid[0]),
