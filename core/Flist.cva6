@@ -76,8 +76,22 @@ ${CVA6_REPO_DIR}/core/cvxif_example/include/cvxif_instr_pkg.sv
 ${CVA6_REPO_DIR}/core/cvxif_fu.sv
 ${CVA6_REPO_DIR}/core/cvxif_example/cvxif_example_coprocessor.sv
 ${CVA6_REPO_DIR}/core/cvxif_example/instr_decoder.sv
-${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/uint64_vadd64b2w.v
-${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/uint64_vadd64b2w_regslice_forward.v
+${CVA6_REPO_DIR}/core/cvxif_example/blackbox.sv
+// custom vadd instruction, vlen = 2
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/uint64_vadd64b2w/uint64_vadd64b2w.v
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/uint64_vadd64b2w/uint64_vadd64b2w_regslice_forward.v
+// t64_CAG444toRGB888_k8_10MHz, vlen in = 3, vlen out = 3, only one in operator
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/t64_CAG444toRGB888_k8_10MHz/t64_CAG444toRGB888_k8_flow_control_loop_pipe_sequential_init.v
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/t64_CAG444toRGB888_k8_10MHz/t64_CAG444toRGB888_k8_t64_CAG444toRGB888_k8_Pipeline_VITIS_LOOP_50_1.v
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/t64_CAG444toRGB888_k8_10MHz/t64_CAG444toRGB888_k8_mac_muladd_8ns_11ns_16s_20_4_1.v
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/t64_CAG444toRGB888_k8_10MHz/t64_CAG444toRGB888_k8.v
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/t64_CAG444toRGB888_k8_10MHz/t64_CAG444toRGB888_k8_regslice_forward.v
+// t64_nv12toCAG444_k8_10MHz, vlen in = 2, vlen out = 3
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/t64_nv12toCAG444_k8_10MHz/t64_nv12toCAG444_k8_flow_control_loop_pipe_sequential_init.v
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/t64_nv12toCAG444_k8_10MHz/t64_nv12toCAG444_k8_t64_nv12toCAG444_k8_Pipeline_VITIS_LOOP_17_1.v
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/t64_nv12toCAG444_k8_10MHz/t64_nv12toCAG444_k8_regslice_forward.v
+${CVA6_REPO_DIR}/core/cvxif_example/cust_inst/t64_nv12toCAG444_k8_10MHz/t64_nv12toCAG444_k8.v
+
 ${CVA6_REPO_DIR}/core/ariane_vecram.sv
 
 // Common Cells

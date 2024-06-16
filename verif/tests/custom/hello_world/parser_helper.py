@@ -5,7 +5,9 @@
 # mv.xv a0, v0.0
 # mv.vx v0.0, a0
 # vadd2 v1, v2, v3  (v1 = v2 + v3)
+# v2 is rs1, v3 is rs2
 
+from functools import wraps
 vname2vnumber = {f"v{i}": i for i in range(32)}
 rname2rnumber = {f"x{i}": i for i in range(32)}
 aliases = {
@@ -55,9 +57,24 @@ def parseVecNumber(vec: str):
     number, word = map(int, vec[1:].split("."))
     return number, word
 
+
+def preProcess(instr: str):
+    instr = instr[3:]  # drop "///"
+    instr = instr.replace(",", " ")
+    instr = instr.split()
+    return instr
+
+def postAddWord(f):
+    def addWord(instr: int):
+        return f".word 0b{instr:032b}"
+
+    @wraps(f)
+    def wrapper(instr):
+        return addWord(f(instr))
+    return wrapper
 # mv vec -> scalar: mv.vx v0.0, a0
 
-
+@postAddWord
 def mvvxParser(instr: list[str]):
     func7 = 0b0000000
     func3 = 0b000
@@ -76,7 +93,7 @@ def mvvxParser(instr: list[str]):
 
 # mv scalar -> vec: mv.xv a0, v0.0
 
-
+@postAddWord
 def mvxvParser(instr: list[str]):
     func7 = 0b0000000
     func3 = 0b001
@@ -95,7 +112,7 @@ def mvxvParser(instr: list[str]):
 
 # vadd2 v1, v2, v3  (v1 = v2 + v3)
 
-
+@postAddWord
 def vadd2Parser(instr: list[str]):
     func7 = 0b0000001
     func3 = 0b000
@@ -111,32 +128,62 @@ def vadd2Parser(instr: list[str]):
 
     return concateHelper(func7, func3, rd, rs1, rs2, opcode)
 
+@postAddWord
+def nv2cgaParser(instr: list[str]):
+    func7 = 0b0000010
+    func3 = 0b000
+    opcode = 0b0001011
+    assert len(instr) == 3
+    assert instr[0] in vname2vnumber
+    assert instr[1] in vname2vnumber
+    assert instr[2] in vname2vnumber
+
+    rd = vname2vnumber[instr[0]]
+    rs1 = vname2vnumber[instr[1]]
+    rs2 = vname2vnumber[instr[2]]
+
+    return concateHelper(func7, func3, rd, rs1, rs2, opcode)
+
+@postAddWord
+def cga2rgbParser(instr: list[str]):
+    func7 = 0b0000011
+    func3 = 0b000
+    opcode = 0b0001011
+    assert len(instr) == 2
+    assert instr[0] in vname2vnumber
+    assert instr[1] in vname2vnumber
+
+    rd = vname2vnumber[instr[0]]
+    rs1 = vname2vnumber[instr[1]]
+    rs2 = vname2vnumber["v0"]
+
+    return concateHelper(func7, func3, rd, rs1, rs2, opcode)
+
+# Pesudo instruction
+def echoParser(instr: list[str]):
+    assert len(instr) == 1
+    return instr[0]
 
 # name -> func7, func3,
 inst_list = {
     "mv.vx": mvvxParser,
     "mv.xv": mvxvParser,
-    "vadd2": vadd2Parser
+    "vadd2": vadd2Parser,
+    "nv2cag": nv2cgaParser,
+    "cag2rgb": cga2rgbParser,
+    "echo": echoParser
 }
 
-def preProcess(instr: str):
-    instr = instr[3:]  # drop "///"
-    instr = instr.replace(",", " ")
-    instr = instr.split()
-    return instr
-
-def postProcess(instr: int):
-    return f".word 0b{instr:032b}"
 
 while True:
     try:
-      instr = input()
+        instr = input()
     except:
-      break
+        break
     if not instr.startswith("///"):
-      continue
+        continue
     instr = preProcess(instr)
     assert instr[0] in inst_list
-    
+
     binary_inst = inst_list[instr[0]](instr[1:])
-    print(postProcess(binary_inst))
+    print(binary_inst)

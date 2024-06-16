@@ -5,7 +5,19 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python Debugger: Current File with Arguments",
+      "name": "Python Debugger: Debug Parser",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${command:python.interpreterPath}",
+      "program": "${workspaceFolder}/verif/tests/custom/hello_world/parser_helper.py",
+      "console": "integratedTerminal",
+      "args": [
+        "<",
+        "${workspaceFolder}/verif/tests/custom/hello_world/linux_test/nv2cag_cag2rgb.S"
+      ]
+    },
+    {
+      "name": "Python Debugger: Run cva6.py",
       "type": "debugpy",
       "python": "${command:python.interpreterPath}",
       "request": "launch",
@@ -16,10 +28,10 @@
         "rv64gc",
         "--iss=veri-testharness",
         "--iss_yaml=cva6.yaml",
-        //"--c_tests",
-        //"../tests/custom/hello_world/hello_world.c",
-        "--asm_tests",
-        "../tests/custom/hello_world/vadd4_test.S",
+        "--c_tests",
+        "../tests/custom/hello_world/linux_test/tb-sim.c",
+        //"--asm_tests",
+        //"../tests/custom/hello_world/cag2rgb_test.S",
         "--linker=../tests/custom/common/test.ld",
         "--gcc_opts=-static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -g ../tests/custom/common/syscalls.c ../tests/custom/common/crt.S -lgcc -I../tests/custom/env -I../tests/custom/common",
       ],

@@ -51,8 +51,8 @@ module cvxif_example_coprocessor
   assign cvxif_resp_o.x_issue_ready = x_issue_ready_o;
   assign cvxif_resp_o.x_issue_resp  = x_issue_resp_o;
 
-  custom_vec_op_e decoded_op;
-  vlen_t          decoded_vlen;
+  custom_vec_op_e       decoded_op;
+  vlen_t          [2:0] decoded_vlen;
 
   // Decode incoming instruction
   instr_decoder #(
@@ -158,7 +158,7 @@ module cvxif_example_coprocessor
       vec_raddr_d[0] = {x_issue_req_i.instr[19:15], PrefixZero};  // rs1
       vec_raddr_d[1] = {x_issue_req_i.instr[24:20], PrefixZero};  // rs2
       for (int i = 0; i < CVA6Cfg.CustomReadPorts; i++) begin
-        vlen_d[i] = decoded_vlen;
+        vlen_d[i] = decoded_vlen[i];
       end
     end else if (fired_new_instr) begin
       vec_raddr_d[0] = tmp_rd_complete_addr;
@@ -259,7 +259,7 @@ module cvxif_example_coprocessor
     end
   end
 
-  uint64_vadd64b2w blackbox (
+  blackbox blackbox (
       .ap_clk(clk_i),
       .ap_rst_n(rst_ni),
       .ap_start(inst_start_d),
@@ -274,7 +274,10 @@ module cvxif_example_coprocessor
       .in2_read(blkbox_read_ack[1]),
       .out_r_din(blk_write_data),
       .out_r_full_n(blk_write_ready),
-      .out_r_write(blk_write_ack)
+      .out_r_write(blk_write_ack),
+
+      .opcode(decoded_op),
+      .fire(new_calc_instr)
   );
 
 
