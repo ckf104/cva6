@@ -138,6 +138,38 @@ module ariane_xilinx (
   input  wire [7:0]    pci_exp_rxp     ,
   input  wire [7:0]    pci_exp_rxn     ,
   input  logic         trst_n          ,
+`elsif ZC706
+  input  logic         sys_clk_p   ,
+  input  logic         sys_clk_n   ,
+  input  logic         cpu_reset   ,
+  inout  wire  [63:0]  ddr3_dq     ,
+  inout  wire  [ 7:0]  ddr3_dqs_n  ,
+  inout  wire  [ 7:0]  ddr3_dqs_p  ,
+  output logic [13:0]  ddr3_addr   ,
+  output logic [ 2:0]  ddr3_ba     ,
+  output logic         ddr3_ras_n  ,
+  output logic         ddr3_cas_n  ,
+  output logic         ddr3_we_n   ,
+  output logic         ddr3_reset_n,
+  output logic [ 0:0]  ddr3_ck_p   ,
+  output logic [ 0:0]  ddr3_ck_n   ,
+  output logic [ 0:0]  ddr3_cke    ,
+  output logic [ 0:0]  ddr3_cs_n   ,
+  output logic [ 7:0]  ddr3_dm     ,
+  output logic [ 0:0]  ddr3_odt    ,
+  output wire          eth_rst_n   ,
+  input  wire          eth_rxck    ,
+  input  wire          eth_rxctl   ,
+  input  wire [3:0]    eth_rxd     ,
+  output wire          eth_txck    ,
+  output wire          eth_txctl   ,
+  output wire [3:0]    eth_txd     ,
+  inout  wire          eth_mdio    ,
+  output logic         eth_mdc     ,
+  output logic [ 7:0]  led         ,
+  input  logic [ 7:0]  sw          ,
+  output logic         fan_pwm     ,
+  input  logic         trst        ,
 `endif
   // SPI
   output logic        spi_mosi    ,
@@ -241,6 +273,9 @@ assign cpu_reset  = ~cpu_resetn;
 `elsif KC705
 assign cpu_resetn = ~cpu_reset;
 `elsif VC707
+assign cpu_resetn = ~cpu_reset;
+assign trst_n = ~trst;
+`elsif ZC706
 assign cpu_resetn = ~cpu_reset;
 assign trst_n = ~trst;
 `endif
@@ -837,6 +872,9 @@ ariane_peripherals #(
     .InclEthernet ( 1'b0         )
     `elsif VCU118
     .InclSPI      ( 1'b0         ),
+    .InclEthernet ( 1'b0         )
+    `elsif ZC706
+    .InclSPI      ( 1'b1         ),
     .InclEthernet ( 1'b0         )
     `endif
 ) i_ariane_peripherals (
@@ -1766,6 +1804,83 @@ axi_clock_converter_0 pcie_axi_clock_converter (
   .s_axi_rlast    ( pcie_dwidth_axi_rlast    ),
   .s_axi_rvalid   ( pcie_dwidth_axi_rvalid   ),
   .s_axi_rready   ( pcie_dwidth_axi_rready   )
+);
+`elsif ZC706
+fan_ctrl i_fan_ctrl (
+    .clk_i         ( clk        ),
+    .rst_ni        ( ndmreset_n ),
+    .pwm_setting_i ( '1         ),
+    .fan_pwm_o     ( fan_pwm    )
+);
+
+xlnx_mig_7_ddr3 i_ddr (
+    .sys_clk_p,
+    .sys_clk_n,
+    .ddr3_dq,
+    .ddr3_dqs_n,
+    .ddr3_dqs_p,
+    .ddr3_addr,
+    .ddr3_ba,
+    .ddr3_ras_n,
+    .ddr3_cas_n,
+    .ddr3_we_n,
+    .ddr3_reset_n,
+    .ddr3_ck_p,
+    .ddr3_ck_n,
+    .ddr3_cke,
+    .ddr3_cs_n,
+    .ddr3_dm,
+    .ddr3_odt,
+    .mmcm_locked     (                ), // keep open
+    .app_sr_req      ( '0             ),
+    .app_ref_req     ( '0             ),
+    .app_zq_req      ( '0             ),
+    .app_sr_active   (                ), // keep open
+    .app_ref_ack     (                ), // keep open
+    .app_zq_ack      (                ), // keep open
+    .ui_clk          ( ddr_clock_out  ),
+    .ui_clk_sync_rst ( ddr_sync_reset ),
+    .aresetn         ( ndmreset_n     ),
+    .s_axi_awid,
+    .s_axi_awaddr    ( s_axi_awaddr[29:0] ),
+    .s_axi_awlen,
+    .s_axi_awsize,
+    .s_axi_awburst,
+    .s_axi_awlock,
+    .s_axi_awcache,
+    .s_axi_awprot,
+    .s_axi_awqos,
+    .s_axi_awvalid,
+    .s_axi_awready,
+    .s_axi_wdata,
+    .s_axi_wstrb,
+    .s_axi_wlast,
+    .s_axi_wvalid,
+    .s_axi_wready,
+    .s_axi_bready,
+    .s_axi_bid,
+    .s_axi_bresp,
+    .s_axi_bvalid,
+    .s_axi_arid,
+    .s_axi_araddr     ( s_axi_araddr[29:0] ),
+    .s_axi_arlen,
+    .s_axi_arsize,
+    .s_axi_arburst,
+    .s_axi_arlock,
+    .s_axi_arcache,
+    .s_axi_arprot,
+    .s_axi_arqos,
+    .s_axi_arvalid,
+    .s_axi_arready,
+    .s_axi_rready,
+    .s_axi_rid,
+    .s_axi_rdata,
+    .s_axi_rresp,
+    .s_axi_rlast,
+    .s_axi_rvalid,
+    .init_calib_complete (            ), // keep open
+    .device_temp         (            ), // keep open
+    .sys_rst             ( cpu_resetn )
 );
 `endif
 

@@ -28,3 +28,11 @@ if [ "$BOARD" = "vc707" ]; then
   export XILINX_BOARD="xilinx.com:vc707:part0:1.3"
   export CLK_PERIOD_NS="20"
 fi
+
+if [ "$BOARD" = "zc706" ]; then
+  echo -n "Configuring for "
+  echo "Zynq zc706"
+  export XILINX_PART="xc7z045ffg900-2"
+  export XILINX_BOARD="xilinx.com:zc706:part0:1.4"
+  export CLK_PERIOD_NS="20"
+fi

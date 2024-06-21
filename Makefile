@@ -76,6 +76,11 @@ else ifeq ($(BOARD), vc707)
 	XILINX_PART              := xc7vx485tffg1761-2
 	XILINX_BOARD             := xilinx.com:vc707:part0:1.3
 	CLK_PERIOD_NS            := 20
+else ifeq ($(BOARD), zc706)
+	XILINX_PART              := xc7z045ffg900-2
+	XILINX_BOARD             := xilinx.com:zc706:part0:1.4
+	CLK_PERIOD_NS            := 20
+# refer to a new project of vivado with zc706
 else
 $(error Unknown board - please specify a supported FPGA board)
 endif
@@ -174,7 +179,7 @@ src :=  core/include/$(target)_config_pkg.sv                                    
         vendor/pulp-platform/common_cells/src/rstgen_bypass.sv                       \
         vendor/pulp-platform/common_cells/src/rstgen.sv                              \
         vendor/pulp-platform/common_cells/src/addr_decode.sv                         \
-	vendor/pulp-platform/common_cells/src/stream_register.sv                     \
+				vendor/pulp-platform/common_cells/src/stream_register.sv                     \
         vendor/pulp-platform/axi/src/axi_cut.sv                                      \
         vendor/pulp-platform/axi/src/axi_join.sv                                     \
         vendor/pulp-platform/axi/src/axi_delayer.sv                                  \

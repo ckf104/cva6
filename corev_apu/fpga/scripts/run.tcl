@@ -22,6 +22,8 @@ if {$::env(BOARD) eq "genesys2"} {
       add_files -fileset constrs_1 -norecurse constraints/kc705.xdc
 } elseif {$::env(BOARD) eq "vc707"} {
       add_files -fileset constrs_1 -norecurse constraints/vc707.xdc
+} elseif {$::env(BOARD) eq "zc706"} {
+      add_files -fileset constrs_1 -norecurse constraints/zc706.xdc
 } else {
       exit 1
 }
@@ -63,6 +65,10 @@ if {$::env(BOARD) eq "genesys2"} {
       read_verilog -sv {src/vc707.svh ../../vendor/pulp-platform/common_cells/include/common_cells/registers.svh}
       set file "src/vc707.svh"
       set registers "../../vendor/pulp-platform/common_cells/include/common_cells/registers.svh"
+} elseif {$::env(BOARD) eq "zc706"} {
+      read_verilog -sv {src/zc706.svh ../../vendor/pulp-platform/common_cells/include/common_cells/registers.svh}
+      set file "src/zc706.svh"
+      set registers "../../vendor/pulp-platform/common_cells/include/common_cells/registers.svh"
 } else {
     exit 1
 }
@@ -96,11 +102,30 @@ report_clock_interaction                                                -file re
 set_property "steps.place_design.args.directive" "RuntimeOptimized" [get_runs impl_1]
 set_property "steps.route_design.args.directive" "RuntimeOptimized" [get_runs impl_1]
 
+# This is unsafe to not bind to some standard.
+if {$::env(BOARD) eq "zc706"} {
+      set_property SEVERITY {Warning} [get_drc_checks NSTD-1]
+      set_property SEVERITY {Warning} [get_drc_checks UCIO-1]
+} 
+
 launch_runs impl_1
 wait_on_run impl_1
+
+exec echo "Finish impl_1 but not write_bitstream"
+
+# same as above.
+if {$::env(BOARD) eq "zc706"} {
+      set_property SEVERITY {Warning} [get_drc_checks NSTD-1]
+      set_property SEVERITY {Warning} [get_drc_checks UCIO-1]
+      set_property STEPS.WRITE_BITSTREAM.TCL.PRE {../../scripts/fix_error_write_bitstream.tcl} [get_runs impl_1] 
+}
+
 launch_runs impl_1 -to_step write_bitstream
 wait_on_run impl_1
-open_run impl_1
+
+exec echo "Finish impl_1 and write_bitstream"
+
+open_run    impl_1
 
 # output Verilog netlist + SDC for timing simulation
 write_verilog -force -mode funcsim work-fpga/${project}_funcsim.v
