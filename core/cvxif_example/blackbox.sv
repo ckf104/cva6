@@ -82,7 +82,7 @@ module blackbox
     out_r_write = 'b0;
     out_r_din = 'b0;
 
-    for (int i = VADD2; i < NumCustomInst; i++) begin
+    for (int i = MV_X_V + 1; i < NumCustomInst; i++) begin
       if (opcode_d == i) begin
         inst_ap_start[i] = ap_start;
         inst_in1_empty_n[i] = in1_empty_n;
@@ -98,24 +98,6 @@ module blackbox
       end
     end
   end
-
-  uint64_vadd64b2w vadd (
-      .ap_clk      (ap_clk),
-      .ap_rst_n    (ap_rst_n),
-      .ap_start    (inst_ap_start[VADD2]),
-      .ap_done     (inst_ap_done[VADD2]),
-      .ap_idle     (inst_ap_idle[VADD2]),
-      .ap_ready    (inst_ap_ready[VADD2]),
-      .in1_dout    (in1_dout),
-      .in1_empty_n (inst_in1_empty_n[VADD2]),
-      .in1_read    (inst_in1_read[VADD2]),
-      .in2_dout    (in2_dout),
-      .in2_empty_n (inst_in2_empty_n[VADD2]),
-      .in2_read    (inst_in2_read[VADD2]),
-      .out_r_din   (inst_out_r_din[VADD2]),
-      .out_r_full_n(out_r_full_n),
-      .out_r_write (inst_out_r_write[VADD2])
-  );
 
   // vlen in = 2 , vlen out = 3
   t64_nv12toCAG444_k8 nv12tocag444 (

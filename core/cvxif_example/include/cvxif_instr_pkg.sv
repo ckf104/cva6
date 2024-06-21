@@ -12,9 +12,8 @@ package cvxif_instr_pkg;
   typedef enum logic [2:0] {
     MV_V_X = 'b0,
     MV_X_V = 'b1,
-    VADD2 = 'b10, // VADD2 should be first one
-    NV12toCAG444 = 'b11,
-    CAG444toRGB888 = 'b100,
+    NV12toCAG444 = 'b10,
+    CAG444toRGB888 = 'b11,
     NumCustomInst  = CAG444toRGB888 + 1
   } custom_vec_op_e;
 
@@ -33,7 +32,7 @@ package cvxif_instr_pkg;
 
 
   // 2 Possible RISCV instructions for Coprocessor
-  parameter int unsigned NbInstr = 5;
+  parameter int unsigned NbInstr = 4;
   parameter copro_issue_resp_t CoproInstr[NbInstr] = '{
       '{
           instr: 32'b00000_00_00000_00000_0_00_00000_0001011,  // v to x mv
@@ -61,22 +60,6 @@ package cvxif_instr_pkg;
           resp : '{
               accept : 1'b1,
               writeback : 1'b1,
-              dualwrite : 1'b0,
-              dualread : 1'b0,
-              loadstore : 1'b0,
-              exc : 1'b0
-          }
-      },
-      '{
-          instr: 32'b00000_01_00000_00000_0_00_00000_0001011,  // vadd4
-          mask: 32'b11111_11_00000_00000_1_11_00000_1111111,
-          op: VADD2,
-          vlen_in1: 'd2,
-          vlen_in2: 'd2,
-          vlen_out: 'd2,
-          resp : '{
-              accept : 1'b1,
-              writeback : 1'b0,
               dualwrite : 1'b0,
               dualread : 1'b0,
               loadstore : 1'b0,

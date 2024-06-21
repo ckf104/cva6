@@ -12,7 +12,7 @@ package cva6_config_pkg;
 
   localparam CVA6ConfigXlen = 64;
 
-  localparam CVA6ConfigFpuEn = 1;
+  localparam CVA6ConfigFpuEn = 0;  // Disable float operation
   localparam CVA6ConfigF16En = 0;
   localparam CVA6ConfigF16AltEn = 0;
   localparam CVA6ConfigF8En = 0;
@@ -22,8 +22,8 @@ package cva6_config_pkg;
   localparam CVA6ConfigCExtEn = 1;
   localparam CVA6ConfigZcbExtEn = 1;
   localparam CVA6ConfigZcmpExtEn = 0;
-  localparam CVA6ConfigAExtEn = 1;
-  localparam CVA6ConfigBExtEn = 1;
+  localparam CVA6ConfigAExtEn = 0;   // Disable atomic extension
+  localparam CVA6ConfigBExtEn = 0;   // Disable bit manipulation extension
   localparam CVA6ConfigVExtEn = 0;
   localparam CVA6ConfigZiCondExtEn = 1;
 
@@ -71,7 +71,7 @@ package cva6_config_pkg;
 
   localparam config_pkg::cache_type_t CVA6ConfigDcacheType = config_pkg::WT;
 
-  localparam CVA6ConfigMmuPresent = 1;
+  localparam CVA6ConfigMmuPresent = 0; // disable mmu
 
   localparam CVA6ConfigRvfiTrace = 1;
 
@@ -104,8 +104,8 @@ package cva6_config_pkg;
       CvxifEn: bit'(CVA6ConfigCvxifEn),
       ZiCondExtEn: bit'(CVA6ConfigZiCondExtEn),
       NrScoreboardEntries: unsigned'(CVA6ConfigNrScoreboardEntries),
-      RVS: bit'(1),
-      RVU: bit'(1),
+      RVS: bit'(0),  // disable supervisor mode
+      RVU: bit'(0),  // disable user mode
       HaltAddress: 64'h800,
       ExceptionAddress: 64'h808,
       RASDepth: unsigned'(CVA6ConfigRASDepth),

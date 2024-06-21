@@ -10,6 +10,18 @@
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 root-dir    := $(dir $(mkfile_path))
 
+ifndef FREQ
+$(warning must set expected running frequency -- setting it to 50MHz for you)
+export FREQ = 50MHz
+endif
+
+ifneq ($(FREQ),50MHz)
+ifneq ($(FREQ),150MHz)
+$(warning FREQ can only be 50MHz or 150MHz -- setting it to 50MHz for you...)
+export FREQ = 50MHz
+endif
+endif
+
 ifndef CVA6_REPO_DIR
 $(warning must set CVA6_REPO_DIR to point at the root of CVA6 sources and CVA6_TB_DIR to point here -- doing it for you...)
 export CVA6_REPO_DIR = $(abspath $(root-dir)../..)

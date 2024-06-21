@@ -47,6 +47,18 @@ $(warning must set CVA6_REPO_DIR to point at the root of CVA6 sources -- doing i
 export CVA6_REPO_DIR = $(abspath $(root-dir))
 endif
 
+ifndef FREQ
+$(warning must set expected running frequency -- setting it to 50MHz for you)
+export FREQ = 50MHz
+endif
+
+ifneq ($(FREQ),50MHz)
+ifneq ($(FREQ),150MHz)
+$(warning FREQ can only be 50MHz or 150MHz -- setting it to 50MHz for you...)
+export FREQ = 50MHz
+endif
+endif
+
 support_verilator_4 := $(shell ($(verilator) --version | grep '4\.') > /dev/null 2>&1 ; echo $$?)
 ifeq ($(support_verilator_4), 0)
 	verilator_threads := 1
@@ -95,7 +107,7 @@ endif
 # target takes one of the following cva6 hardware configuration:
 # cv64a6_imafdc_sv39, cv32a6_imac_sv0, cv32a6_imac_sv32, cv32a6_imafc_sv32, cv32a6_ima_sv32_fpga
 # Changing the default target to cv32a60x for Step1 verification
-target     ?= rv64gc
+target     ?= rv64imc
 ifndef TARGET_CFG
 	export TARGET_CFG = $(target)
 endif
