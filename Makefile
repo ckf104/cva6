@@ -187,6 +187,12 @@ src :=  core/include/$(target)_config_pkg.sv                                    
         corev_apu/riscv-dbg/src/dm_top.sv                                            \
         corev_apu/riscv-dbg/debug_rom/debug_rom.sv                                   \
         corev_apu/register_interface/src/apb_to_reg.sv                               \
+        corev_apu/tb/custom_inst_block/axi_mst_join.sv                               \
+        corev_apu/tb/custom_inst_block/axi_slv_break.sv                              \
+        corev_apu/tb/custom_inst_block/ctrlreg.sv                                    \
+        corev_apu/tb/custom_inst_cva6_top.sv                                         \
+        corev_apu/tb/custom_inst_cva6_with_reg.sv                                    \
+        corev_apu/bootrom/custom_inst/cust_inst_bootrom.sv                           \
         vendor/pulp-platform/axi/src/axi_multicut.sv                                 \
         vendor/pulp-platform/common_cells/src/rstgen_bypass.sv                       \
         vendor/pulp-platform/common_cells/src/rstgen.sv                              \
@@ -594,17 +600,17 @@ verilate_command := $(verilator) --no-timing verilator_config.vlt               
                     -CFLAGS "$(CFLAGS)$(if $(PROFILE), -g -pg,) -DVL_DEBUG -I$(SPIKE_INSTALL_DIR)"               \
                     $(if $(SPIKE_TANDEM), +define+SPIKE_TANDEM, )                                                \
                     --cc --vpi                                                                                   \
-                    $(list_incdir) --top-module ariane_testharness                                               \
+                    $(list_incdir) --top-module custom_inst_cva6_top                                             \
                     --threads-dpi none                                                                           \
                     --Mdir $(ver-library) -O3                                                                    \
-                    --exe corev_apu/tb/ariane_tb.cpp corev_apu/tb/dpi/SimDTM.cc corev_apu/tb/dpi/SimJTAG.cc      \
-                    corev_apu/tb/dpi/remote_bitbang.cc corev_apu/tb/dpi/msim_helper.cc
+                    --exe corev_apu/tb/custom_inst_cva6.cpp                                                      \
+										--timescale-override 1ps/1ps
 
 # User Verilator, at some point in the future this will be auto-generated
 verilate:
 	@echo "[Verilator] Building Model$(if $(PROFILE), for Profiling,)"
 	$(verilate_command)
-	cd $(ver-library) && $(MAKE) -j${NUM_JOBS} -f Variane_testharness.mk
+	cd $(ver-library) && $(MAKE) -j${NUM_JOBS} -f Vcustom_inst_cva6_top.mk
 
 sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf_file)

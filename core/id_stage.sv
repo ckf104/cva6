@@ -132,6 +132,7 @@ module id_stage #(
       assign is_compressed_cmp = is_compressed;
       assign is_last_macro_instr_o = '0;
       assign is_double_rd_macro_instr_o = '0;
+      assign stall_instr_fetch = '0;
     end
   end else begin
     assign instruction = fetch_entry_i.instruction;

@@ -22,13 +22,13 @@ package cva6_config_pkg;
   localparam CVA6ConfigCExtEn = 1;
   localparam CVA6ConfigZcbExtEn = 1;
   localparam CVA6ConfigZcmpExtEn = 0;
-  localparam CVA6ConfigAExtEn = 0;   // Disable atomic extension
-  localparam CVA6ConfigBExtEn = 0;   // Disable bit manipulation extension
+  localparam CVA6ConfigAExtEn = 0;  // Disable atomic extension
+  localparam CVA6ConfigBExtEn = 0;  // Disable bit manipulation extension
   localparam CVA6ConfigVExtEn = 0;
   localparam CVA6ConfigZiCondExtEn = 1;
 
-  localparam CVA6ConfigAxiIdWidth = 4;
-  localparam CVA6ConfigAxiAddrWidth = 64;
+  localparam CVA6ConfigAxiIdWidth = 2;  // Such that slave id width is 4 bits
+  localparam CVA6ConfigAxiAddrWidth = 64;  // TODO: change to 32bits
   localparam CVA6ConfigAxiDataWidth = 64;
   localparam CVA6ConfigFetchUserEn = 0;
   localparam CVA6ConfigFetchUserWidth = CVA6ConfigXlen;
@@ -65,13 +65,13 @@ package cva6_config_pkg;
 
   localparam CVA6ConfigTvalEn = 1;
 
-  localparam CVA6ConfigNrPMPEntries = 8;
+  localparam CVA6ConfigNrPMPEntries = 0;
 
   localparam CVA6ConfigPerfCounterEn = 1;
 
   localparam config_pkg::cache_type_t CVA6ConfigDcacheType = config_pkg::WT;
 
-  localparam CVA6ConfigMmuPresent = 0; // disable mmu
+  localparam CVA6ConfigMmuPresent = 0;  // disable mmu
 
   localparam CVA6ConfigRvfiTrace = 1;
 
@@ -121,26 +121,26 @@ package cva6_config_pkg;
       // idempotent region
       NrNonIdempotentRules:
       unsigned'(
-      2
+      1
       ),
-      NonIdempotentAddrBase: 1024'({64'b0, 64'b0}),
-      NonIdempotentLength: 1024'({64'b0, 64'b0}),
-      NrExecuteRegionRules: unsigned'(3),
-      //                      DRAM,          Boot ROM,   Debug Module
+      NonIdempotentAddrBase: 1024'({64'h2000_0000}),
+      NonIdempotentLength: 1024'({64'h100}),
+      NrExecuteRegionRules: unsigned'(1),
+      // Boot ROM
       ExecuteRegionAddrBase:
       1024'(
-      {64'h8000_0000, 64'h1_0000, 64'h0}
+      {64'h0}
       ),
-      ExecuteRegionLength: 1024'({64'h40000000, 64'h10000, 64'h1000}),
+      ExecuteRegionLength: 1024'({64'h10000}),
       // cached region
       NrCachedRegionRules:
       unsigned'(
-      1
+      2
       ),
-      CachedRegionAddrBase: 1024'({64'h8000_0000}),
-      CachedRegionLength: 1024'({64'h40000000}),
+      CachedRegionAddrBase: 1024'({64'h1000_0000, 64'h0}),
+      CachedRegionLength: 1024'({64'h1800000, 64'h10000}),
       MaxOutstandingStores: unsigned'(7),
-      DebugEn: bit'(1),
+      DebugEn: bit'(0),  // Disable debug mode
       AxiBurstWriteEn: bit'(0),
       IcacheByteSize: unsigned'(CVA6ConfigIcacheByteSize),
       IcacheSetAssoc: unsigned'(CVA6ConfigIcacheSetAssoc),

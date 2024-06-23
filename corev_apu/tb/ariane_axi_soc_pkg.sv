@@ -22,7 +22,7 @@ package ariane_axi_soc;
     localparam DataWidth = ariane_axi::DataWidth;
     localparam StrbWidth = DataWidth / 8;
     localparam IdWidth = ariane_axi::IdWidth;
-    localparam IdWidthSlave = IdWidth + $clog2(ariane_soc::NrSlaves);
+    localparam IdWidthSlave = IdWidth + $clog2(4);
 
     typedef logic [IdWidth-1:0] id_t;
     typedef logic [IdWidthSlave-1:0] id_slv_t;
