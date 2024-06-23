@@ -147,9 +147,9 @@ module custom_inst_cva6_with_reg
   ///////////////////////
 
   // RVFI
-  localparam type rvfi_instr_t = `RVFI_INSTR_T(CVA6Cfg);
-  localparam type rvfi_csr_elmt_t = `RVFI_CSR_ELMT_T(CVA6Cfg);
-  localparam type rvfi_csr_t = `RVFI_CSR_T(CVA6Cfg, rvfi_csr_elmt_t);
+  // localparam type rvfi_instr_t = `RVFI_INSTR_T(CVA6Cfg);
+  // localparam type rvfi_csr_elmt_t = `RVFI_CSR_ELMT_T(CVA6Cfg);
+  // localparam type rvfi_csr_t = `RVFI_CSR_T(CVA6Cfg, rvfi_csr_elmt_t);
 
   localparam type rvfi_probes_instr_t = `RVFI_PROBES_INSTR_T(CVA6Cfg);
   localparam type rvfi_probes_csr_t = `RVFI_PROBES_CSR_T(CVA6Cfg);
@@ -180,12 +180,12 @@ module custom_inst_cva6_with_reg
       .irq_i        ('b0),
       .ipi_i        ('b0),
       .time_irq_i   ('b0),
-      .rvfi_probes_o(rvfi_probes),     // Ignore rvfi probes 
+      .rvfi_probes_o(),     // Ignore rvfi probes 
       .debug_req_i  (1'b0),
       .noc_req_o    (axi_ariane_req),
       .noc_resp_i   (axi_ariane_resp)
   );
-
+/*
   cva6_rvfi #(
       .CVA6Cfg   (CVA6Cfg),
       .rvfi_instr_t(rvfi_instr_t),
@@ -216,7 +216,7 @@ module custom_inst_cva6_with_reg
       .rvfi_csr_i(rvfi_csr),
       .end_of_test_o(rvfi_exit)
   );
-
+*/
   //////////////////////
   // AXI Slave 0: ROM //
   //////////////////////
