@@ -101,7 +101,7 @@ class JinjaVariable:
         self.inputWidth = Inst.InputWidth
         self.outputWidth = Inst.OutputWidth
         self.opocdeWidth = math.ceil(math.log2(Inst.MaxOpcode + 1))
-        self.inputIndexWidth = math.ceil(math.log2(Inst.MaxInputNumber))
+        self.inputIndexWidth = math.ceil(math.log2((Inst.MaxInputNumber + 1) // 2))
         self.outputIndexWidth = math.ceil(math.log2(Inst.MaxOutputNumber))
         self.numGroup = len(groups)
         self.groupNames = [f"jinja_gen_{g.name}" for g in groups]
@@ -118,22 +118,21 @@ class JinjaVariable:
                 assert i.opcode == cur_op, f"{i} Opcode {i.opcode} does not match"
                 cur_op += 1
             ret.append(cur_op)
-        return "{" + ", ".join([str(x) for x in ret]) + "}"
+        return "'{" + ", ".join([str(x) for x in reversed(ret)]) + "}"
 
     def getInputRegsArray(self, groups: list[Group]):
         inputRegsArray = [max(i.input_number for i in g.insts) for g in groups]
-        return "{" + ", ".join([str(x) for x in inputRegsArray]) + "}"
+        return "'{" + ", ".join([str(x) for x in reversed(inputRegsArray)]) + "}"
 
     def getOutputRegsArray(self, groups: list[Group]):
         outputRegsArray = [max(i.output_number for i in g.insts) for g in groups]
-        return "{" + ", ".join([str(x) for x in outputRegsArray]) + "}"
+        return "'{" + ", ".join([str(x) for x in reversed(outputRegsArray)]) + "}"
 
     def renderGroups(self, output_dir: str, temp_path: str):
         import jinja2
 
         env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(temp_path),
-            autoescape=jinja2.select_autoescape(["sv"]),
         )
         template = env.get_template("groups.temp.sv")
         with open(os.path.join(output_dir, "groups.sv"), "w") as f:
