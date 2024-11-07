@@ -5,6 +5,32 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Python Debugger: filter",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/verif/sim/filter.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/verif/sim",
+      "args": [
+        "<",
+        "${workspaceFolder}/verif/sim/out_2024-11-06/veri-testharness_sim/yuv_test.rv64gc.log.iss",
+        ">",
+        "filter.log"
+      ],
+    },
+    {
+      "name": "Python Debugger: Debug yaml parser",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/core/cvxif_example/parse_config.py",
+      "console": "integratedTerminal",
+      "args": [
+        "${env:HOME}/test-1/config.yaml",
+        "--output-dir=${workspaceFolder}/core/cvxif_example/cust_inst",
+        "--temp-dir=${workspaceFolder}/core/cvxif_example"
+      ]
+    },
+    {
       "name": "Python Debugger: Debug Parser",
       "type": "debugpy",
       "request": "launch",
@@ -29,7 +55,7 @@
         "--iss=veri-testharness",
         "--iss_yaml=cva6.yaml",
         "--c_tests",
-        "../tests/custom/hello_world/linux_test/tb-sim.c",
+        "../tests/custom/hello_world/linux_test/yuv_test3.c",
         //"--asm_tests",
         //"../tests/custom/hello_world/cag2rgb_test.S",
         "--linker=../tests/custom/common/test.ld",
@@ -38,6 +64,9 @@
       "cwd": "${workspaceFolder}/verif/sim",
       "env": {
         // This will generate `<elfname>.fst` file in the same directory of log
+        //"RISCV_GCC": "${env:RISCV}/bin/riscv64-unknown-elf-gcc",
+        //"SPIKE_PATH": "${env:RISCV}/bin",
+        //"RISCV_OBJCOPY": "${env:RISCV}/bin/riscv64-unknown-elf-objcopy",
         "TRACE_COMPACT": "1"
       }
     }
