@@ -18,6 +18,11 @@ package cvxif_pkg;
   localparam X_RFR_WIDTH = riscv::XLEN;
   localparam X_RFW_WIDTH = riscv::XLEN;
 
+  localparam logic [6:0] CUSTOM0 = 7'b00_010_11;
+  localparam logic [6:0] CUSTOM1 = 7'b01_010_11;
+  localparam logic [6:0] CUSTOM2 = 7'b10_110_11;
+  localparam logic [6:0] CUSTOM3 = 7'b11_110_11;
+
   typedef struct packed {
     logic [15:0]           instr;
     logic [1:0]            mode;

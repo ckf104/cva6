@@ -12,8 +12,8 @@ module {{ group_name }} #(
   parameter type in_data_t  = logic [          inputWidth-1:0],
   parameter type out_data_t = logic [         outputWidth-1:0],
   parameter type opcode_t   = logic [         opocdeWidth-1:0],
-  parameter type in_idx_t   = logic [ $clog2(numInputReg)-1:0],
-  parameter type out_idx_t  = logic [$clog2(numOutputReg)-1:0]
+  parameter type in_idx_t   = logic [$clog2(numInputReg == 1 ? 2 : numInputReg)-1:0],
+  parameter type out_idx_t  = logic [$clog2(numOutputReg == 1 ? 2 : numOutputReg)-1:0]
 ) (
   input logic clk_i,
   input logic rst_ni,
@@ -112,5 +112,5 @@ module {{ group_name }} #(
     .out{{ i+1 }}(out_data[{{ i }}]),
   {% endfor %}
     .out{{ numOutputReg }}(out_data[{{ numOutputReg-1}}])
-  )
+  );
 endmodule

@@ -59,17 +59,49 @@ module cvxif_fu
     assign rs_valid = 2'b11;
   end
 
+  // Keep track of the data if coprocessor is not ready. This should
+  // be done in issue stage...
+  logic sel_q, sel_d;
+  fu_data_t fu_data_q, fu_data_d;
+  logic [31:0] off_instr_q, off_instr_d;
+
+  always_comb begin : buf_data_if_not_ready
+    sel_d = sel_q;
+    fu_data_d = fu_data_q;
+    off_instr_d = off_instr_q;
+
+    if (x_ready_o) begin
+      sel_d = 1'b0;
+    end
+    if (x_valid_i & ~x_ready_o) begin
+      sel_d = 1'b1;
+      fu_data_d = fu_data_i;  
+      off_instr_d = x_off_instr_i;
+    end
+  end
+
+  always_ff @( posedge clk_i or negedge rst_ni ) begin : update_buf
+    if(!rst_ni) begin
+      // Don't need to reset `fu_dat_q`, `off_instr_q`
+      sel_q <= 'b0;
+    end else begin
+      fu_data_q <= fu_data_d;
+      off_instr_q <= off_instr_d;
+      sel_q <= sel_d;
+    end
+  end
+
   always_comb begin
     cvxif_req_o = '0;
     cvxif_req_o.x_result_ready = 1'b1;
     x_ready_o = cvxif_resp_i.x_issue_ready;
-    if (x_valid_i) begin
-      cvxif_req_o.x_issue_valid     = x_valid_i;
-      cvxif_req_o.x_issue_req.instr = x_off_instr_i;
+    if (x_valid_i || sel_q) begin
+      cvxif_req_o.x_issue_valid     = x_valid_i || sel_q;
+      cvxif_req_o.x_issue_req.instr = sel_q ? off_instr_q : x_off_instr_i;
       cvxif_req_o.x_issue_req.mode  = priv_lvl_i;
-      cvxif_req_o.x_issue_req.id    = fu_data_i.trans_id;
-      cvxif_req_o.x_issue_req.rs[0] = fu_data_i.operand_a;
-      cvxif_req_o.x_issue_req.rs[1] = fu_data_i.operand_b;
+      cvxif_req_o.x_issue_req.id    = sel_q ? fu_data_q.trans_id : fu_data_i.trans_id;
+      cvxif_req_o.x_issue_req.rs[0] = sel_q ? fu_data_q.operand_a : fu_data_i.operand_a;
+      cvxif_req_o.x_issue_req.rs[1] = sel_q ? fu_data_q.operand_b : fu_data_i.operand_b;
       if (cvxif_pkg::X_NUM_RS == 3) begin
         cvxif_req_o.x_issue_req.rs[2] = fu_data_i.imm;
       end

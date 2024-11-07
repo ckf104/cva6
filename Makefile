@@ -551,9 +551,13 @@ xrun-check-benchmarks:
 
 xrun-ci: xrun-asm-tests xrun-amo-tests xrun-mul-tests xrun-fp-tests xrun-benchmarks
 
+# Find all verilog files in the cust_inst directory
+SEARCH_DIR := core/cvxif_example/cust_inst
+SV_FILES := $(shell find $(SEARCH_DIR) -type f \( -name "*.sv" -o -name "*.v" \))
 # verilator-specific
 verilate_command := $(verilator) --no-timing verilator_config.vlt                                                \
                     -f core/Flist.cva6                                                                           \
+										$(SV_FILES)                                   						                                   \
                     core/cva6_rvfi.sv                                                                            \
                     $(filter-out %.vhd, $(ariane_pkg))                                                           \
                     $(filter-out core/fpu_wrap.sv, $(filter-out %.vhd, $(filter-out %_config_pkg.sv, $(src))))   \

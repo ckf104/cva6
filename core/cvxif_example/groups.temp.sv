@@ -7,11 +7,11 @@ module groups
 #(
   parameter type instr_id_t = logic [X_ID_WIDTH-1:0],
 
-  parameter int unsigned inputWidth = {{ var.inputWidth }},
-  parameter int unsigned outputWidth = {{ var.outputWidth }},
-  parameter int unsigned opocdeWidth = {{ var.opocdeWidth }},
-  parameter int unsigned inputIndexWidth = {{ var.inputIndexWidth }},
-  parameter int unsigned outputIndexWidth = {{ var.outputIndexWidth }},
+  parameter int unsigned inputWidth,
+  parameter int unsigned outputWidth,
+  parameter int unsigned opocdeWidth,
+  parameter int unsigned inputIndexWidth,
+  parameter int unsigned outputIndexWidth,
 
   parameter type opcode_t   = logic [     opocdeWidth-1:0],
   parameter type in_data_t  = logic [      inputWidth-1:0],
@@ -31,11 +31,12 @@ module groups
   input in_data_t [1:0] in_data_i,
 
   input  logic      out_data_vld_i,  // Is pick valid?
-  input  out_idx_t  out_idx_i,       // output data index, should stay constant during the execution
+  input  out_idx_t  out_idx_i,       // output data index
+  output logic      invalid_instr_o, // Whether the instruction is invalid
   output out_data_t out_data_o,
   output instr_id_t instr_id_o,
-  output logic      done_o,
-  output logic      busy_o            // Whether we can accept this new instruction    
+  output logic      done_o,          // execution of one instruction is done and can be written back
+  output logic      busy_o            // Whether we can accept this new instruction, depend on opcode    
 );
   localparam int numGroup = {{ var.numGroup }};
   localparam int unsigned opcodeToGroup[numGroup:0] = {{ var.opcodeToGroup }};
@@ -48,7 +49,7 @@ module groups
   always_comb begin : vld_group
     vld_group_id = 'b0;
     for (int unsigned i = 0; i < numGroup; ++i) begin
-      onehot_vld[i]   = (opcode_i[i] >= opcodeToGroup[i]) && (opcode_i[i] < opcodeToGroup[i+1]);
+      onehot_vld[i]   = (opcode_i >= opcodeToGroup[i]) && (opcode_i < opcodeToGroup[i+1]);
       in_data_vld[i]  = onehot_vld[i] && in_data_vld_i;
       out_data_vld[i] = onehot_vld[i] && out_data_vld_i;
       exec_vld[i]     = onehot_vld[i] && exec_i;
@@ -56,6 +57,8 @@ module groups
       if (onehot_vld[i]) vld_group_id = i;
     end
   end
+
+  assign invalid_instr_o = opcode_i >= opcodeToGroup[numGroup];
 
   // Only one group can commit its output at each cycle, so we need additional `buf_q` to
   // hold the output data. `can_writeback_gnt` is used to indicate whether the group can writeback
@@ -70,8 +73,10 @@ module groups
   out_data_t [numGroup-1:0] out_data;
   logic [numGroup-1:0] buf_vld_q, buf_vld_d;
 
-  // Pick without exec will get its output immediately, so give it highest priority
-  logic is_pick_without_exec = !exec_i && out_data_vld_i;
+  // Pick/Fill without exec will be done immediately, so give it highest priority
+  logic is_pick_fill_without_exec;
+  assign is_pick_fill_without_exec = !exec_i && (out_data_vld_i || in_data_vld_i);
+
   logic arb_out_req;
   buffer_data_t arb_buf;
 
@@ -86,7 +91,7 @@ module groups
     .req_i  (buf_vld_q),
     .gnt_o  (can_writeback_gnt),
     .data_i (buf_q),
-    .gnt_i  (!is_pick_without_exec),
+    .gnt_i  (!is_pick_fill_without_exec),
     .req_o  (arb_out_req),
     .data_o (arb_buf),
     .idx_o  ()
@@ -111,8 +116,10 @@ module groups
       end
     end
 
-    out_data_o = is_pick_without_exec ? out_data[vld_group_id] : arb_buf.out_data;
-    instr_id_o = is_pick_without_exec ? instr_id_i : arb_buf.instr_id;
+    out_data_o = is_pick_fill_without_exec ? out_data[vld_group_id] : arb_buf.out_data;
+    instr_id_o = is_pick_fill_without_exec ? instr_id_i : arb_buf.instr_id;
+    // we can commit a execution if req/grant handshake succeed
+    done_o = arb_out_req && !is_pick_fill_without_exec;
   end
 
   logic [numGroup-1:0] busy_q, busy_d, busy;
@@ -141,7 +148,7 @@ module groups
       busy_q    <= 'b0;
     end else begin
       buf_vld_q <= buf_vld_d;
-      buf_q     <= ouf_d;
+      buf_q     <= buf_d;
       busy_q    <= busy_d;
     end
   end
@@ -186,7 +193,7 @@ module groups
         .exec_i       (exec_vld[{{ loop.index0 }}]),
         .opcode_i     (opcode_i),
         .in_data_vld_i(in_data_vld[{{ loop.index0 }}]),
-        .in_idx_i     (in_idx_i),
+        .in_idx_i     ({in_idx_i, 1'b0}),
         .in_data_i    (in_data_i),
         .out_idx_i    (out_idx_i),
         .out_data_o   (out_data[{{ loop.index0 }}]),
