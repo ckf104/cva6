@@ -25,9 +25,9 @@
       "program": "${workspaceFolder}/core/cvxif_example/parse_config.py",
       "console": "integratedTerminal",
       "args": [
-        "${env:HOME}/test-1/config.yaml",
-        "--output-dir=${workspaceFolder}/core/cvxif_example/cust_inst",
-        "--temp-dir=${workspaceFolder}/core/cvxif_example"
+        "${env:HOME}/test-1/config.yaml"
+        //"--output-dir=${workspaceFolder}/core/cvxif_example/cust_inst",
+        //"--temp-dir=${workspaceFolder}/core/cvxif_example"
       ]
     },
     {

@@ -226,14 +226,14 @@ def main():
     parser.add_argument(
         "--output-dir",
         type=str,
-        default=os.getcwd(),
-        help="Directory to save the output files (default: current working directory)",
+        default=os.path.join(os.path.dirname(__file__), "cust_inst"),
+        help="Directory to save the output files (default: <file_directory>/cust_inst)",
     )
     parser.add_argument(
         "--temp-dir",
         type=str,
-        default=os.getcwd(),
-        help="Directory to the template file (default: current working directory)",
+        default=os.path.dirname(__file__),
+        help="Directory to the template file (default: the directory of this script)",
     )
     parser.add_argument(
         "--disable-copy-verilog",

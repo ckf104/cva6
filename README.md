@@ -1,3 +1,7 @@
+目前的实现逻辑是，`core/cvxif_example/parse_config.py` 会根据提供的 yaml 文件来生成需要的 verilog 文件。用法为 `python core/cvxif_example/parse_config.py  <yaml_config_file>`，运行完成后，可以参考 `.vscode/launch.json` 文件中的 "Python Debugger: Run cva6.py" 配置来运行待模拟的 C 程序，它会调用 riscv-gcc 编译 C 程序和调用 verilator 编译 verilog，然后模拟运行编译好的 C 程序。
+
+在环境配置上，根据 `verif/regress/smoke-tests.sh` 中的脚本安装 spike 和 verilator，建议不要使用自己安装的 spike 和 verilator，不然编译时会有些问题。运行 cva6.py 前运行 `source verif/sim/setup-env.sh` 设置好环境变量
+
 ![Build Status](https://github.com/openhwgroup/cva6/actions/workflows/ci.yml/badge.svg?branch=master)
 
 > **Warning**
