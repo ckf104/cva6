@@ -8,6 +8,7 @@
 # v2 is rs1, v3 is rs2
 
 from functools import wraps
+
 vname2vnumber = {f"v{i}": i for i in range(32)}
 rname2rnumber = {f"x{i}": i for i in range(32)}
 aliases = {
@@ -42,7 +43,7 @@ aliases = {
     "t3": 28,
     "t4": 29,
     "t5": 30,
-    "t6": 31
+    "t6": 31,
 }
 rname2rnumber.update(aliases)
 
@@ -64,6 +65,7 @@ def preProcess(instr: str):
     instr = instr.split()
     return instr
 
+
 def postAddWord(f):
     def addWord(instr: int):
         return f".word 0b{instr:032b}"
@@ -71,8 +73,12 @@ def postAddWord(f):
     @wraps(f)
     def wrapper(instr):
         return addWord(f(instr))
+
     return wrapper
+
+
 # mv vec -> scalar: mv.vx v0.0, a0
+
 
 @postAddWord
 def mvvxParser(instr: list[str]):
@@ -91,7 +97,9 @@ def mvvxParser(instr: list[str]):
 
     return concateHelper(func7, func3, rd, rs1, rs2, opcode)
 
+
 # mv scalar -> vec: mv.xv a0, v0.0
+
 
 @postAddWord
 def mvxvParser(instr: list[str]):
@@ -110,7 +118,9 @@ def mvxvParser(instr: list[str]):
 
     return concateHelper(func7, func3, rd, rs1, rs2, opcode)
 
+
 # vadd2 v1, v2, v3  (v1 = v2 + v3)
+
 
 @postAddWord
 def vadd2Parser(instr: list[str]):
@@ -128,6 +138,7 @@ def vadd2Parser(instr: list[str]):
 
     return concateHelper(func7, func3, rd, rs1, rs2, opcode)
 
+
 @postAddWord
 def nv2cgaParser(instr: list[str]):
     func7 = 0b0000010
@@ -144,6 +155,7 @@ def nv2cgaParser(instr: list[str]):
 
     return concateHelper(func7, func3, rd, rs1, rs2, opcode)
 
+
 @postAddWord
 def cga2rgbParser(instr: list[str]):
     func7 = 0b0000011
@@ -159,10 +171,85 @@ def cga2rgbParser(instr: list[str]):
 
     return concateHelper(func7, func3, rd, rs1, rs2, opcode)
 
+
 # Pesudo instruction
 def echoParser(instr: list[str]):
-    assert len(instr) == 1
-    return instr[0]
+    return ", ".join(instr)
+
+
+# example format:
+# exec.p.f/exec.f.p/pick.f/fill.p, rdIdx, rd, rsIdx, rs1, rs2, opcode
+# pick, rdIdx, rd, opcode
+# fill, rsIdx, rs1, rs2, opcode
+def pickFillExecParser(instr: list[str], has_pick: bool, has_fill: bool, has_exec: bool):
+    if has_exec:
+        assert has_pick and has_fill, "exec must have pick and fill"
+    assert has_pick or has_fill, "must have pick or fill"
+    assert len(instr) == 6
+
+    custom0 = 0b00_010_11
+    custom1 = 0b01_010_11
+    custom2 = 0b10_110_11
+    custom3 = 0b11_110_11
+
+    opcode = (
+        custom0
+        if has_exec
+        else custom1 if has_pick and has_fill else custom2 if has_pick else custom3
+    )
+    rdIdx = int(instr[0])
+    rd = rname2rnumber[instr[1]]
+    rsIdx = int(instr[2])
+    rs1 = rname2rnumber[instr[3]]
+    rs2 = rname2rnumber[instr[4]]
+    instr_op = int(instr[5])
+
+    assert rsIdx < 16, "rsIdx must be less than 16"
+    assert rsIdx % 2 == 0, "rsIdx must be even"
+    rsIdx = rsIdx // 2
+
+    assert rdIdx < 8, "rdIdx must be less than 8"
+    assert instr_op < 16, "instr_op must be less than 16"
+    if not has_fill:
+        assert rs1 == 0 and rs2 == 0, "rs1 and rs2 must be zero if no fill"
+    if not has_pick:
+        assert rd == 0, "rd must be zero if no pick"
+
+    func7 = (rsIdx << 4) | instr_op
+    func3 = rdIdx
+    return concateHelper(func7, func3, rd, rs1, rs2, opcode)
+
+
+# pick
+@postAddWord
+def pickParser(instr: list[str]):
+    assert len(instr) == 3, "pick must have 3 arguments"
+    instr.insert(2, "0")  # insert rsIdx
+    instr.insert(3, "x0")  # insert rs1
+    instr.insert(4, "x0")  # insert rs2
+    return pickFillExecParser(instr, True, False, False)
+
+
+# fill
+@postAddWord
+def fillParser(instr: list[str]):
+    assert len(instr) == 4, "fill must have 4 arguments"
+    instr.insert(0, "0")  # insert rdIdx
+    instr.insert(1, "x0")  # insert rd
+    return pickFillExecParser(instr, False, True, False)
+
+
+# pick.f, fill.p
+@postAddWord
+def pickFillParser(instr: list[str]):
+    return pickFillExecParser(instr, True, True, False)
+
+
+# exec.p.f
+@postAddWord
+def execParser(instr: list[str]):
+    return pickFillExecParser(instr, True, True, True)
+
 
 # name -> func7, func3,
 inst_list = {
@@ -171,7 +258,13 @@ inst_list = {
     "vadd2": vadd2Parser,
     "nv2cag": nv2cgaParser,
     "cag2rgb": cga2rgbParser,
-    "echo": echoParser
+    "echo": echoParser,
+    "pick": pickParser,
+    "fill": fillParser,
+    "pick.f": pickFillParser,
+    "fill.p": fillParser,
+    "exec.p.f": execParser,
+    "exec.f.p": execParser,
 }
 
 
