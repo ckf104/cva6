@@ -28,7 +28,7 @@ module rvfi_tracer #(
   int unsigned SIM_FINISH;
   initial begin
     f = $fopen($sformatf("trace_rvfi_hart_%h.dasm", HART_ID), "w");
-    if (!$value$plusargs("time_out=%d", SIM_FINISH)) SIM_FINISH = 2000000;
+    if (!$value$plusargs("time_out=%d", SIM_FINISH)) SIM_FINISH = 200000000;
     if (!$value$plusargs("tohost_addr=%h", TOHOST_ADDR)) TOHOST_ADDR = '0;
     if (TOHOST_ADDR == '0) begin
       $display("*** [rvf_tracer] WARNING: No valid address of 'tohost' (tohost == 0x%h), termination possible only by timeout or Ctrl-C!\n", TOHOST_ADDR);
