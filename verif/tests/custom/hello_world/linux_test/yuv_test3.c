@@ -109,19 +109,11 @@ void group0(unsigned char opcode, unsigned char in1, unsigned char in2,
             unsigned char in3, unsigned char *out1, unsigned char *out2,
             unsigned char *out3) {
   if (opcode == 0) {
+#ifdef USE_EXT_INST
     RGB2YUV_EX(in1, in2, in3, out1, out2, out3);
-  }
-  return;
-}
-
-void group1(unsigned char opcode, unsigned char in1, unsigned char in2,
-            unsigned char in3, unsigned char *out1) {
-  if (opcode == 1) {
-    RGB2Y_EX(in1, in2, in3, out1);
-  } else if (opcode == 2) {
-    RGB2U_EX(in1, in2, in3, out1);
-  } else if (opcode == 3) {
-    RGB2V_EX(in1, in2, in3, out1);
+#else
+    RGB2YUV(in1, in2, in3, out1, out2, out3);
+#endif
   }
   return;
 }
@@ -138,13 +130,15 @@ int main() {
 
   int err = 0;
 
-  for (int i = 0; i < 7; ++i) {
+  for (int i = 0; i < 3000; ++i) {
     unsigned char YY, UU, VV;
-
+    int j = i % 7;
     //		RGB2YUV(testRGB[i][0], testRGB[i][1], testRGB[i][2], YY, UU,
     // VV);
-    group0(0, testRGB[i][0], testRGB[i][1], testRGB[i][2], &YY, &UU, &VV);
-    if (YY != testYUV[i][0]) {
+    group0(0, testRGB[j][0], testRGB[j][1], testRGB[j][2], &YY, &UU, &VV);
+    err |=
+        (YY != testYUV[j][0]) || (UU != testYUV[j][1]) || (VV != testYUV[j][2]);
+    /*if (YY != testYUV[i][0]) {
       err = i * 0x1000;
       break;
     } else if (UU != testYUV[i][1]) {
@@ -169,7 +163,7 @@ int main() {
     if (VV != testYUV[i][2]) {
       err = i * 0x1000 + 5;
       break;
-    }
+    }*/
   }
 
   return err;
