@@ -42,7 +42,7 @@ module groups
   localparam int unsigned opcodeToGroup[numGroup:0] = {{ var.opcodeToGroup }};
 
   logic [        numGroup-1:0] onehot_vld;  // one hot valid encoding
-  logic [$clog2(numGroup)-1:0] vld_group_id;  // valid group id for this instruction
+  logic [$clog2(numGroup == 1 ? 2 : numGroup)-1:0] vld_group_id;  // valid group id for this instruction
   logic [numGroup-1:0] in_data_vld, out_data_vld;  // one hot valid for input/output data
   logic [numGroup-1:0] exec_vld;  // one hot valid for execution
 
@@ -103,7 +103,7 @@ module groups
       buf_d[i]     = buf_q[i];
       buf_vld_d[i] = buf_vld_q[i];
 
-      if (can_writeback_gnt[i]) begin
+      if (can_writeback_gnt[i] && buf_vld_q[i]) begin
         buf_vld_d[i] = 1'b0;
       end
       if (done[i]) begin
@@ -127,7 +127,7 @@ module groups
   always_comb begin : acc_or_busy
     busy_d = busy_q;
     for (int unsigned i = 0; i < numGroup; i++) begin
-      if(can_writeback_gnt[i]) begin
+      if(can_writeback_gnt[i] && buf_vld_q[i]) begin
         busy_d[i] = 1'b0;
       end  
       if (exec_vld[i]) begin
