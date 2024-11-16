@@ -39,7 +39,6 @@ module groups
   output logic      busy_o            // Whether we can accept this new instruction, depend on opcode    
 );
   localparam int numGroup = {{ var.numGroup }};
-  localparam int unsigned opcodeToGroup[numGroup:0] = {{ var.opcodeToGroup }};
 
   logic [        numGroup-1:0] onehot_vld;  // one hot valid encoding
   logic [$clog2(numGroup == 1 ? 2 : numGroup)-1:0] vld_group_id;  // valid group id for this instruction
@@ -47,18 +46,16 @@ module groups
   logic [numGroup-1:0] exec_vld;  // one hot valid for execution
 
   always_comb begin : vld_group
-    vld_group_id = 'b0;
+    vld_group_id = opcode_i;
     for (int unsigned i = 0; i < numGroup; ++i) begin
-      onehot_vld[i]   = (opcode_i >= opcodeToGroup[i]) && (opcode_i < opcodeToGroup[i+1]);
+      onehot_vld[i]   = opcode_i == i;
       in_data_vld[i]  = onehot_vld[i] && in_data_vld_i;
       out_data_vld[i] = onehot_vld[i] && out_data_vld_i;
       exec_vld[i]     = onehot_vld[i] && exec_i;
-
-      if (onehot_vld[i]) vld_group_id = i;
     end
   end
 
-  assign invalid_instr_o = opcode_i >= opcodeToGroup[numGroup];
+  assign invalid_instr_o = opcode_i >= numGroup;
 
   // Only one group can commit its output at each cycle, so we need additional `buf_q` to
   // hold the output data. `can_writeback_gnt` is used to indicate whether the group can writeback
@@ -185,13 +182,11 @@ module groups
         .numInputReg (groupInputRegs[{{ loop.index0 }}]),
         .numOutputReg(groupOutputRegs[{{ loop.index0 }}]),
         .inputWidth  (inputWidth),
-        .outputWidth (outputWidth),
-        .opocdeWidth (opocdeWidth)
+        .outputWidth (outputWidth)
       ) group_inst_{{ loop.index0 }} (
         .clk_i        (clk_i),
         .rst_ni       (rst_ni),
         .exec_i       (exec_vld[{{ loop.index0 }}]),
-        .opcode_i     (opcode_i),
         .in_data_vld_i(in_data_vld[{{ loop.index0 }}]),
         .in_idx_i     ({in_idx_i, 1'b0}),
         .in_data_i    (in_data_i),

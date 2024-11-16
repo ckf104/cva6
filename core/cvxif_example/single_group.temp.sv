@@ -6,12 +6,10 @@ module {{ group_name }} #(
   parameter int unsigned numOutputReg,
   parameter int unsigned inputWidth,
   parameter int unsigned outputWidth,
-  parameter int unsigned opocdeWidth,
 
   // local parameter
   parameter type in_data_t  = logic [          inputWidth-1:0],
   parameter type out_data_t = logic [         outputWidth-1:0],
-  parameter type opcode_t   = logic [         opocdeWidth-1:0],
   parameter type in_idx_t   = logic [$clog2(numInputReg == 1 ? 2 : numInputReg)-1:0],
   parameter type out_idx_t  = logic [$clog2(numOutputReg == 1 ? 2 : numOutputReg)-1:0]
 ) (
@@ -21,7 +19,6 @@ module {{ group_name }} #(
   input logic exec_i,  // Is exec valid?
 
   input  logic            in_data_vld_i,  // Is fill valid?
-  input  opcode_t         opcode_i,       // Instruction opcode
   input  in_idx_t         in_idx_i,       // input data index
   input  in_data_t  [1:0] in_data_i,
   input  out_idx_t        out_idx_i,      // output data index
@@ -31,7 +28,6 @@ module {{ group_name }} #(
 
   in_data_t [numInputReg-1:0] in_data_q, in_data_d;
   out_data_t [numOutputReg-1:0] out_data_q, out_data_d, out_data;
-  opcode_t opcode_q, opcode_d;
 
   out_idx_t out_idx_q, out_idx_d;  // Record which index will be picked by execution
 
@@ -72,11 +68,6 @@ module {{ group_name }} #(
       end
     end
 
-    opcode_d = opcode_q;
-    if (exec_i) begin
-      opcode_d = opcode_i;
-    end
-
     out_data_o = ap_done ? out_data_d[out_idx_q] : out_data_d[out_idx_i];
 
     out_idx_d  = exec_i ? out_idx_i : out_idx_q;
@@ -86,14 +77,12 @@ module {{ group_name }} #(
     if (!rst_ni) begin
       // Do not need to reset the input, output data
       // Do not need to reset `out_idx_q`
-      // Do not need to reset `opcode_q`
       exec_q <= '0;
     end else begin
       in_data_q  <= in_data_d;
       out_data_q <= out_data_d;
       exec_q     <= exec_d;
       out_idx_q  <= out_idx_d;
-      opcode_q   <= opcode_d;
     end
   end
 
@@ -104,7 +93,6 @@ module {{ group_name }} #(
     .ap_done(ap_done),
     .ap_idle(ap_idle),
     .ap_ready(ap_ready),
-    .opcode(opcode_q),
   {% for i in range(numInputReg) %}
     .in{{ i+1 }}(in_data_q[{{ i }}]),
   {% endfor %}

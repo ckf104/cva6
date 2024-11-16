@@ -11,9 +11,8 @@ class Inst:
     MaxInputNumber = 16  # 3 bits, since only even input index
     MaxOutputNumber = 8  # 3 bits
 
-    def __init__(self, name: str, opcode: int, input_number: int, output_number: int):
+    def __init__(self, name: str, input_number: int, output_number: int):
         self.name = name
-        self.opcode = opcode
         self.input_number = input_number
         self.output_number = output_number
 
@@ -21,14 +20,11 @@ class Inst:
 
     def __repr__(self):
         return (
-            f"Inst(name={self.name}, opcode={self.opcode}, "
+            f"Inst(name={self.name}, "
             f"input_number={self.input_number}, output_number={self.output_number})"
         )
 
     def compatiblity_check(self):
-        assert (
-            self.opcode <= self.MaxOpcode
-        ), f"Opcode {self.opcode} exceeds maximum value {self.MaxOpcode}"
         assert (
             self.input_number <= self.MaxInputNumber
         ), f"Input number {self.input_number} exceeds maximum value {self.MaxInputNumber}"
@@ -107,19 +103,19 @@ class JinjaVariable:
         self.numGroup = len(groups)
         self.groupNames = [f"jinja_gen_{g.name}" for g in groups]
 
-        self.opcodeToGroup = self.getOpcodeToGroupArray(groups)
+        # self.opcodeToGroup = self.getOpcodeToGroupArray(groups)
         self.groupInputRegs = self.getInputRegsArray(groups)
         self.groupOutputRegs = self.getOutputRegsArray(groups)
 
-    def getOpcodeToGroupArray(self, groups: List[Group]):
-        cur_op = 0
-        ret = [cur_op]
-        for g in groups:
-            for i in g.insts:
-                assert i.opcode == cur_op, f"{i} Opcode {i.opcode} does not match"
-                cur_op += 1
-            ret.append(cur_op)
-        return "'{" + ", ".join([str(x) for x in reversed(ret)]) + "}"
+    # def getOpcodeToGroupArray(self, groups: List[Group]):
+    #     cur_op = 0
+    #     ret = [cur_op]
+    #     for g in groups:
+    #         for i in g.insts:
+    #             assert i.opcode == cur_op, f"{i} Opcode {i.opcode} does not match"
+    #             cur_op += 1
+    #         ret.append(cur_op)
+    #     return "'{" + ", ".join([str(x) for x in reversed(ret)]) + "}"
 
     def getInputRegsArray(self, groups: List[Group]):
         inputRegsArray = [max(i.input_number for i in g.insts) for g in groups]
@@ -170,7 +166,6 @@ def parse_yaml(file_path):
 def parse_inst(inst) -> Inst:
     return Inst(
         name=inst["name"],
-        opcode=inst["opcode"],
         input_number=inst["input-number"],
         output_number=inst["output-number"],
     )
