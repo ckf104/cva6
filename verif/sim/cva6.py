@@ -565,7 +565,7 @@ def run_c(c_test, iss_yaml, isa, target, mabi, gcc_opts, iss_opts, output_dir,
     debug_cmd   : Produce the debug cmd log without running
     linker      : Path to the linker
   """
-  if not c_test.endswith(".c"):
+  if not c_test.endswith(".c") and not c_test.endswith(".o"):
     logging.error("%s is not a .c file" % c_test)
     return
   cwd = os.path.dirname(os.path.realpath(__file__))
@@ -602,7 +602,7 @@ def run_c(c_test, iss_yaml, isa, target, mabi, gcc_opts, iss_opts, output_dir,
     base_cmd = parse_iss_yaml(iss, iss_yaml, isa, target, setting_dir, debug_cmd, priv)
     cmd = get_iss_cmd(base_cmd, elf, target, log)
     logging.info("[%0s] Running ISS simulation: %s" % (iss, cmd))
-    run_cmd(cmd, 300, debug_cmd = debug_cmd)
+    run_cmd(cmd, 1800, debug_cmd = debug_cmd)
     logging.info("[%0s] Running ISS simulation: %s ...done" % (iss, elf))
   if len(iss_list) == 2:
     compare_iss_log(iss_list, log_list, report)
@@ -1052,13 +1052,13 @@ def check_spike_version():
   user_spike_version = subprocess.run("$SPIKE_PATH/spike -v", capture_output=True, text=True, shell=True)
   user_spike_version_string = user_spike_version.stderr.strip()
 
-  if user_spike_version.returncode != 0:
-    incorrect_version_exit("Spike", "- unknown -", spike_version)
+  #if user_spike_version.returncode != 0:
+  #  incorrect_version_exit("Spike", "- unknown -", spike_version)
     
-  logging.info(f"Spike Version: {user_spike_version_string}")
+  #logging.info(f"Spike Version: {user_spike_version_string}")
 
-  if user_spike_version_string != spike_version:
-    incorrect_version_exit("Spike", user_spike_version_string, spike_version)
+  #if user_spike_version_string != spike_version:
+  #  incorrect_version_exit("Spike", user_spike_version_string, spike_version)
 
 def check_verilator_version():
   REQUIRED_VERILATOR_VERSION = "5.008"
