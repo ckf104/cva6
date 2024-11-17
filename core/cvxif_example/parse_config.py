@@ -48,7 +48,8 @@ class Group:
         reset_protocol: str,
         verilog_files: list,
         top_module: str,
-        insts: List[Inst],
+        input_number: int,
+        output_number: int
     ):
         self.name = name
         self.input_protocol = input_protocol
@@ -57,7 +58,8 @@ class Group:
         self.reset_protocol = reset_protocol
         self.verilog_files = verilog_files
         self.top_module = top_module
-        self.insts = insts
+        self.input_number = input_number
+        self.output_number =  output_number
 
         self.compatiblity_check()
 
@@ -66,8 +68,7 @@ class Group:
             f"Group(name={self.name}, input_protocol={self.input_protocol}, "
             f"output_protocol={self.output_protocol}, block_protocol={self.block_protocol}, "
             f"reset_protocol={self.reset_protocol}, verilog_files={self.verilog_files}, "
-            f"top_module={self.top_module}, insts={self.insts})"
-        )
+            f"top_module={self.top_module}, input_number={self.input_number}, output_number={self.output_number}")
 
     def compatiblity_check(self):
         assert (
@@ -118,11 +119,11 @@ class JinjaVariable:
     #     return "'{" + ", ".join([str(x) for x in reversed(ret)]) + "}"
 
     def getInputRegsArray(self, groups: List[Group]):
-        inputRegsArray = [max(i.input_number for i in g.insts) for g in groups]
+        inputRegsArray = [g.input_number for g in groups]
         return "'{" + ", ".join([str(x) for x in reversed(inputRegsArray)]) + "}"
 
     def getOutputRegsArray(self, groups: List[Group]):
-        outputRegsArray = [max(i.output_number for i in g.insts) for g in groups]
+        outputRegsArray = [g.output_number for g in groups]
         return "'{" + ", ".join([str(x) for x in reversed(outputRegsArray)]) + "}"
 
     def renderGroups(self, output_dir: str, temp_path: str):
@@ -137,8 +138,8 @@ class JinjaVariable:
 
         template = env.get_template("single_group.temp.sv")
         for name, g in zip(self.groupNames, self.groups):
-            inputRegs = max(i.input_number for i in g.insts)
-            outputRegs = max(i.output_number for i in g.insts)
+            inputRegs = g.input_number
+            outputRegs = g.output_number
             with open(os.path.join(output_dir, f"{name}.sv"), "w") as f:
                 f.write(
                     template.render(
@@ -181,7 +182,8 @@ def parse_group(data) -> List[Group]:
             reset_protocol=group["reset-protocol"],
             verilog_files=group["verilog-files"],
             top_module=group["top-module"],
-            insts=[parse_inst(inst) for inst in group["insts"]],
+            input_number=group["input-number"],
+            output_number=group["output-number"]
         )
         for group in data["group"]
     ]
