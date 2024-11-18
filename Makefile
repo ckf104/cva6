@@ -553,8 +553,8 @@ xrun-ci: xrun-asm-tests xrun-amo-tests xrun-mul-tests xrun-fp-tests xrun-benchma
 
 # Find all verilog files in the cust_inst directory
 SEARCH_DIR := core/cvxif_example/cust_inst
-SV_FILES := $(shell find $(SEARCH_DIR) -type f \( -name "*.sv" \))
-V_FILES := $(shell find $(SEARCH_DIR) -type f \( -name "*.v" \))
+SV_FILES := $(shell find $(SEARCH_DIR) -type f \( -name "*.sv" \) -exec readlink -f {} \;)
+V_FILES := $(shell find $(SEARCH_DIR) -type f \( -name "*.v" \) -exec readlink -f {} \;)
 # verilator-specific
 verilate_command := $(verilator) --no-timing verilator_config.vlt                                                \
                     -f core/Flist.cva6                                                                           \
@@ -694,7 +694,7 @@ fpga_filter += $(addprefix $(root-dir), common/local/util/instr_tracer.sv)
 fpga_filter += $(addprefix $(root-dir), vendor/pulp-platform/tech_cells_generic/src/rtl/tc_sram.sv)
 fpga_filter += $(addprefix $(root-dir), common/local/util/tc_sram_wrapper.sv)
 
-fpga: $(ariane_pkg) $(src) $(fpga_src) $(uart_src) $(src_flist)
+fpga: $(ariane_pkg) $(src) $(fpga_src) $(uart_src) $(src_flist) $(SV_FILES) $(V_FILES)
 	@echo "[FPGA] Generate sources"
 	@echo read_vhdl        {$(uart_src)}    > corev_apu/fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(ariane_pkg)} >> corev_apu/fpga/scripts/add_sources.tcl
