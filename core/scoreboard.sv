@@ -330,41 +330,41 @@ module scoreboard #(
   // Read Operands (a.k.a forwarding)
   // ----------------------------------
   // read operand interface: same logic as register file
-  logic [CVA6Cfg.NR_SB_ENTRIES+CVA6Cfg.NrWbPorts-1:0] rs1_fwd_req, rs2_fwd_req, rs3_fwd_req;
-  logic [CVA6Cfg.NR_SB_ENTRIES+CVA6Cfg.NrWbPorts-1:0][CVA6Cfg.XLEN-1:0] rs_data;
+  logic [CVA6Cfg.NR_SB_ENTRIES-1:0] rs1_fwd_req, rs2_fwd_req, rs3_fwd_req;
+  logic [CVA6Cfg.NR_SB_ENTRIES-1:0] rs1_rel_valid, rs2_rel_valid, rs3_rel_valid;
+  logic [CVA6Cfg.NR_SB_ENTRIES-1:0][CVA6Cfg.XLEN-1:0] rs_data;
   logic rs1_valid, rs2_valid, rs3_valid;
 
   // WB ports have higher prio than entries
-  for (genvar k = 0; unsigned'(k) < CVA6Cfg.NrWbPorts; k++) begin : gen_rs_wb
-    assign rs1_fwd_req[k] = (mem_q[trans_id_i[k]].sbe.rd == rs1_i) & wt_valid_i[k] & (~ex_i[k].valid) & (mem_q[trans_id_i[k]].is_rd_fpr_flag == (CVA6Cfg.FpPresent && ariane_pkg::is_rs1_fpr(
-        issue_instr_o.op
-    )));
-    assign rs2_fwd_req[k] = (mem_q[trans_id_i[k]].sbe.rd == rs2_i) & wt_valid_i[k] & (~ex_i[k].valid) & (mem_q[trans_id_i[k]].is_rd_fpr_flag == (CVA6Cfg.FpPresent && ariane_pkg::is_rs2_fpr(
-        issue_instr_o.op
-    )));
-    assign rs3_fwd_req[k] = (mem_q[trans_id_i[k]].sbe.rd == rs3_i) & wt_valid_i[k] & (~ex_i[k].valid) & (mem_q[trans_id_i[k]].is_rd_fpr_flag == (CVA6Cfg.FpPresent && ariane_pkg::is_imm_fpr(
-        issue_instr_o.op
-    )));
-    assign rs_data[k] = wbdata_i[k];
-  end
+  typedef logic[CVA6Cfg.TRANS_ID_BITS-1:0] instr_id_t;
+  instr_id_t [CVA6Cfg.NR_SB_ENTRIES-1:0] map_id;
+
   for (genvar k = 0; unsigned'(k) < CVA6Cfg.NR_SB_ENTRIES; k++) begin : gen_rs_entries
-    assign rs1_fwd_req[k+CVA6Cfg.NrWbPorts] = (mem_q[k].sbe.rd == rs1_i) & mem_q[k].issued & mem_q[k].sbe.valid & (mem_q[k].is_rd_fpr_flag == (CVA6Cfg.FpPresent && ariane_pkg::is_rs1_fpr(
+    assign map_id[k] = commit_pointer_q[0]- (k + 1);
+    assign rs1_fwd_req[k] = (mem_q[map_id[k]].sbe.rd == rs1_i) & mem_q[map_id[k]].issued & (mem_q[map_id[k]].is_rd_fpr_flag == (CVA6Cfg.FpPresent && ariane_pkg::is_rs1_fpr(
         issue_instr_o.op
     )));
-    assign rs2_fwd_req[k+CVA6Cfg.NrWbPorts] = (mem_q[k].sbe.rd == rs2_i) & mem_q[k].issued & mem_q[k].sbe.valid & (mem_q[k].is_rd_fpr_flag == (CVA6Cfg.FpPresent && ariane_pkg::is_rs2_fpr(
+    assign rs2_fwd_req[k] = (mem_q[map_id[k]].sbe.rd == rs2_i) & mem_q[map_id[k]].issued & (mem_q[map_id[k]].is_rd_fpr_flag == (CVA6Cfg.FpPresent && ariane_pkg::is_rs2_fpr(
         issue_instr_o.op
     )));
-    assign rs3_fwd_req[k+CVA6Cfg.NrWbPorts] = (mem_q[k].sbe.rd == rs3_i) & mem_q[k].issued & mem_q[k].sbe.valid & (mem_q[k].is_rd_fpr_flag == (CVA6Cfg.FpPresent && ariane_pkg::is_imm_fpr(
+    assign rs3_fwd_req[k] = (mem_q[map_id[k]].sbe.rd == rs3_i) & mem_q[map_id[k]].issued & (mem_q[map_id[k]].is_rd_fpr_flag == (CVA6Cfg.FpPresent && ariane_pkg::is_imm_fpr(
         issue_instr_o.op
     )));
-    assign rs_data[k+CVA6Cfg.NrWbPorts] = mem_q[k].sbe.result;
+ 
+    assign rs1_rel_valid[k] = mem_q[map_id[k]].sbe.valid;
+    assign rs2_rel_valid[k] = mem_q[map_id[k]].sbe.valid;
+    assign rs3_rel_valid[k] = mem_q[map_id[k]].sbe.valid;
+
+    assign rs_data[k] = mem_q[map_id[k]].sbe.result;
   end
 
+  instr_id_t [2:0]  arb_id;
+
   // check whether we are accessing GPR[0]
-  assign rs1_valid_o = rs1_valid & ((|rs1_i) | (CVA6Cfg.FpPresent && ariane_pkg::is_rs1_fpr(
+  assign rs1_valid_o = rs1_rel_valid[arb_id[0]] & rs1_valid & ((|rs1_i) | (CVA6Cfg.FpPresent && ariane_pkg::is_rs1_fpr(
       issue_instr_o.op
   )));
-  assign rs2_valid_o = rs2_valid & ((|rs2_i) | (CVA6Cfg.FpPresent && ariane_pkg::is_rs2_fpr(
+  assign rs2_valid_o = rs2_rel_valid[arb_id[1]] & rs2_valid & ((|rs2_i) | (CVA6Cfg.FpPresent && ariane_pkg::is_rs2_fpr(
       issue_instr_o.op
   )));
   assign rs3_valid_o = CVA6Cfg.NrRgprPorts == 3 ? rs3_valid & ((|rs3_i) | (CVA6Cfg.FpPresent && ariane_pkg::is_imm_fpr(
@@ -374,7 +374,7 @@ module scoreboard #(
   // use fixed prio here
   // this implicitly gives higher prio to WB ports
   rr_arb_tree #(
-      .NumIn(CVA6Cfg.NR_SB_ENTRIES + CVA6Cfg.NrWbPorts),
+      .NumIn(CVA6Cfg.NR_SB_ENTRIES),
       .DataWidth(CVA6Cfg.XLEN),
       .ExtPrio(1'b1),
       .AxiVldRdy(1'b1)
@@ -389,11 +389,11 @@ module scoreboard #(
       .gnt_i  (1'b1),
       .req_o  (rs1_valid),
       .data_o (rs1_o),
-      .idx_o  ()
+      .idx_o  (arb_id[0])
   );
 
   rr_arb_tree #(
-      .NumIn(CVA6Cfg.NR_SB_ENTRIES + CVA6Cfg.NrWbPorts),
+      .NumIn(CVA6Cfg.NR_SB_ENTRIES),
       .DataWidth(CVA6Cfg.XLEN),
       .ExtPrio(1'b1),
       .AxiVldRdy(1'b1)
@@ -408,13 +408,13 @@ module scoreboard #(
       .gnt_i  (1'b1),
       .req_o  (rs2_valid),
       .data_o (rs2_o),
-      .idx_o  ()
+      .idx_o  (arb_id[1])
   );
 
   logic [CVA6Cfg.XLEN-1:0] rs3;
 
   rr_arb_tree #(
-      .NumIn(CVA6Cfg.NR_SB_ENTRIES + CVA6Cfg.NrWbPorts),
+      .NumIn(CVA6Cfg.NR_SB_ENTRIES),
       .DataWidth(CVA6Cfg.XLEN),
       .ExtPrio(1'b1),
       .AxiVldRdy(1'b1)
@@ -429,7 +429,7 @@ module scoreboard #(
       .gnt_i  (1'b1),
       .req_o  (rs3_valid),
       .data_o (rs3),
-      .idx_o  ()
+      .idx_o  (arb_id[2])
   );
 
   if (CVA6Cfg.NrRgprPorts == 3) begin : gen_gp_three_port

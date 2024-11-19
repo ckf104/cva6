@@ -426,8 +426,7 @@ module issue_read_operands
         // no other instruction has the same destination register -> issue the instruction
         if ((CVA6Cfg.FpPresent && ariane_pkg::is_rd_fpr(
                 issue_instr_i.op
-            )) ? (rd_clobber_fpr_i[issue_instr_i.rd] == NONE) :
-                (rd_clobber_gpr_i[issue_instr_i.rd] == NONE)) begin
+            )) ? (rd_clobber_fpr_i[issue_instr_i.rd] == NONE) : 1'b1) begin
           issue_ack_o = 1'b1;
         end
         // or check that the target destination register will be written in this cycle by the
