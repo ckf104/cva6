@@ -24,8 +24,8 @@ module cvxif_example_coprocessor
   parameter int unsigned inputWidth       = 64,
   parameter int unsigned outputWidth      = 64,
   parameter int unsigned opocdeWidth      = 4,
-  parameter int unsigned inputIndexWidth  = 3,
-  parameter int unsigned outputIndexWidth = 3
+  parameter int unsigned inputIndexWidth  = 4,
+  parameter int unsigned outputIndexWidth = 2
 ) (
   input  logic        clk_i,        // Clock
   input  logic        rst_ni,       // Asynchronous reset active low
@@ -69,11 +69,11 @@ module cvxif_example_coprocessor
   logic [3:0] opcode;
   assign opcode = instruction[28:25];
 
-  logic [2:0] input_idx;
-  assign input_idx = instruction[31:29];
+  logic [inputIndexWidth-1:0] input_idx;
+  assign input_idx = {instruction[31:29], instruction[14]};
 
-  logic [2:0] output_idx;
-  assign output_idx = instruction[14:12];
+  logic [outputIndexWidth-1:0] output_idx;
+  assign output_idx = instruction[13:12];
 
   logic [X_ID_WIDTH-1:0] instr_id;
   assign instr_id = cvxif_req_i.x_issue_req.id;

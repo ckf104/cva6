@@ -8,8 +8,8 @@ class Inst:
     InputWidth = 64  # bit width of input operands
     OutputWidth = 64  # bit width of instruction output
     MaxOpcode = 15  # 4 bits
-    MaxInputNumber = 16  # 3 bits, since only even input index
-    MaxOutputNumber = 8  # 3 bits
+    MaxInputNumber = 32  # 4 bits, since only even input index
+    MaxOutputNumber = 4  # 2 bits
 
     def __init__(self, name: str, input_number: int, output_number: int):
         self.name = name
